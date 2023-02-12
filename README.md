@@ -21,6 +21,7 @@ use Innmind\HttpParser\{
     Request\Parse,
     ServerRequest\Transform,
     ServerRequest\DecodeCookie,
+    ServerRequest\DecodeQuery,
     ServerRequest\DecodeForm,
 };
 use Innmind\TimeContinuum\Earth\Clock;
@@ -45,6 +46,7 @@ $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
 $request = $parse(Str::of($raw)->chunk(10))
     ->map(new Transform)
     ->map(new DecodeCookie)
+    ->map(new DecodeQuery)
     ->map(new DecodeForm)
     ->match(
         static fn($request) => $request,

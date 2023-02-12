@@ -11,6 +11,7 @@ use Innmind\Http\{
     Headers as Container,
     Factory\Header\TryFactory,
 };
+use Innmind\Stream\Capabilities;
 use Innmind\Url\Url;
 use Innmind\Immutable\{
     Maybe,
@@ -22,6 +23,7 @@ use Innmind\Immutable\{
 final class Headers implements State
 {
     private TryFactory $factory;
+    private Capabilities $capabilities;
     private Method $method;
     private Url $url;
     private ProtocolVersion $protocol;
@@ -34,6 +36,7 @@ final class Headers implements State
      */
     private function __construct(
         TryFactory $factory,
+        Capabilities $capabilities,
         Method $method,
         Url $url,
         ProtocolVersion $protocol,
@@ -41,6 +44,7 @@ final class Headers implements State
         Sequence $headers,
     ) {
         $this->factory = $factory;
+        $this->capabilities = $capabilities;
         $this->method = $method;
         $this->url = $url;
         $this->protocol = $protocol;
@@ -50,12 +54,14 @@ final class Headers implements State
 
     public static function new(
         TryFactory $factory,
+        Capabilities $capabilities,
         Method $method,
         Url $url,
         ProtocolVersion $protocol,
     ): self {
         return new self(
             $factory,
+            $capabilities,
             $method,
             $url,
             $protocol,
@@ -72,6 +78,7 @@ final class Headers implements State
             true => $this->parse($buffer),
             false => new self(
                 $this->factory,
+                $this->capabilities,
                 $this->method,
                 $this->url,
                 $this->protocol,
@@ -112,6 +119,7 @@ final class Headers implements State
                     ))),
                     false => new self(
                         $this->factory,
+                        $this->capabilities,
                         $this->method,
                         $this->url,
                         $this->protocol,
@@ -170,6 +178,7 @@ final class Headers implements State
         return $this
             ->headers()
             ->map(fn($headers) => Body::new(
+                $this->capabilities,
                 $this->method,
                 $this->url,
                 $this->protocol,

@@ -11,6 +11,10 @@ use Innmind\Http\{
     Header\ContentLength,
 };
 use Innmind\Filesystem\File\Content;
+use Innmind\Stream\{
+    Capabilities,
+    Bidirectional,
+};
 use Innmind\Url\Url;
 use Innmind\Immutable\{
     Maybe,
@@ -25,10 +29,13 @@ final class Body implements State
     private Headers $headers;
     /** @var Maybe<0|positive-int> */
     private Maybe $length;
-    private Str $body;
+    private Bidirectional $body;
+    /** @var 0|positive-int */
+    private int $accumulated;
 
     /**
      * @param Maybe<0|positive-int> $length
+     * @param 0|positive-int $accumulated
      */
     private function __construct(
         Method $method,
@@ -36,7 +43,8 @@ final class Body implements State
         ProtocolVersion $protocol,
         Headers $headers,
         Maybe $length,
-        Str $body,
+        Bidirectional $body,
+        int $accumulated,
     ) {
         $this->method = $method;
         $this->url = $url;
@@ -44,9 +52,11 @@ final class Body implements State
         $this->headers = $headers;
         $this->length = $length;
         $this->body = $body;
+        $this->accumulated = $accumulated;
     }
 
     public static function new(
+        Capabilities $capabilities,
         Method $method,
         Url $url,
         ProtocolVersion $protocol,
@@ -65,26 +75,39 @@ final class Body implements State
             $protocol,
             $headers,
             $length,
-            Str::of(''),
+            $capabilities->temporary()->new(),
+            0,
         );
     }
 
-    public function add(Str $chunk): self
+    public function add(Str $chunk): State
     {
-        $body = $this->body->append($chunk->toString());
-        $body = $this->length->match(
-            static fn($length) => $body->take($length),
-            static fn() => $body,
-        );
+        $chunk = $chunk->toEncoding('ASCII');
+        $toWrite = $this
+            ->length
+            ->map(fn($length) => \max(0, $length - $this->accumulated))
+            ->match(
+                static fn($length) => $chunk->take($length),
+                static fn() => $chunk,
+            );
 
-        return new self(
-            $this->method,
-            $this->url,
-            $this->protocol,
-            $this->headers,
-            $this->length,
-            $body,
-        );
+        /** @psalm-suppress ArgumentTypeCoercion Due to write returning a Writable */
+        return $this
+            ->body
+            ->write($toWrite)
+            ->map(fn(Bidirectional $body) => new self(
+                $this->method,
+                $this->url,
+                $this->protocol,
+                $this->headers,
+                $this->length,
+                $body,
+                $this->accumulated + $toWrite->length(),
+            ))
+            ->match(
+                static fn($self) => $self,
+                static fn() => new Failure, // failed to write to body
+            );
     }
 
     public function finish(): Maybe
@@ -95,7 +118,7 @@ final class Body implements State
             $this->method,
             $this->protocol,
             $this->headers,
-            Content\Lines::ofContent($this->body->toString()),
+            Content\OfStream::of($this->body),
         ));
     }
 }

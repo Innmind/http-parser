@@ -11,6 +11,7 @@ use Innmind\Http\{
     Factory\Header\Factories,
 };
 use Innmind\TimeContinuum\Clock;
+use Innmind\Stream\Capabilities;
 use Innmind\Url\Url;
 use Innmind\Immutable\{
     Maybe,
@@ -21,18 +22,24 @@ use Innmind\Immutable\{
 final class Uninitialized implements State
 {
     private TryFactory $factory;
+    private Capabilities $capabilities;
     private Str $header;
 
-    private function __construct(TryFactory $factory, Str $header)
-    {
+    private function __construct(
+        TryFactory $factory,
+        Capabilities $capabilities,
+        Str $header,
+    ) {
         $this->factory = $factory;
+        $this->capabilities = $capabilities;
         $this->header = $header;
     }
 
-    public static function new(Clock $clock): self
+    public static function new(Clock $clock, Capabilities $capabilities): self
     {
         return new self(
             new TryFactory(Factories::default($clock)),
+            $capabilities,
             Str::of('', 'ASCII'),
         );
     }
@@ -42,7 +49,7 @@ final class Uninitialized implements State
         $header = $this->header->append($chunk->toString());
 
         return match ($header->contains("\n")) {
-            false => new self($this->factory, $header),
+            false => new self($this->factory, $this->capabilities, $header),
             true => $this->parse($header),
         };
     }
@@ -63,6 +70,7 @@ final class Uninitialized implements State
                     ->match(
                         fn($info) => Headers::new(
                             $this->factory,
+                            $this->capabilities,
                             $info[0],
                             $info[1],
                             $info[2],

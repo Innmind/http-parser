@@ -9,6 +9,7 @@ use Innmind\HttpParser\Request\Buffer\{
 };
 use Innmind\TimeContinuum\Clock;
 use Innmind\Http\Message\Request;
+use Innmind\Stream\Capabilities;
 use Innmind\Immutable\{
     Maybe,
     Str,
@@ -23,9 +24,9 @@ final class Buffer
         $this->state = $state;
     }
 
-    public static function new(Clock $clock): self
+    public static function new(Clock $clock, Capabilities $capabilities): self
     {
-        return new self(Uninitialized::new($clock));
+        return new self(Uninitialized::new($clock, $capabilities));
     }
 
     public function add(Str $chunk): self

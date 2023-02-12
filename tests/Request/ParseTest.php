@@ -10,6 +10,7 @@ use Innmind\Http\{
     Message\Method,
     ProtocolVersion,
 };
+use Innmind\Stream\Streams;
 use Innmind\Immutable\Str;
 use PHPUnit\Framework\TestCase;
 use Innmind\BlackBox\{
@@ -27,7 +28,7 @@ class ParseTest extends TestCase
             ->forAll(Set\Integers::above(1))
             ->then(function($size) {
                 $chunks = Str::of(\file_get_contents('fixtures/get.txt'))->chunk($size);
-                $parse = new Parse(new Clock);
+                $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
 
                 $request = $parse($chunks)->match(
                     static fn($request) => $request,
@@ -83,7 +84,7 @@ class ParseTest extends TestCase
             ->forAll(Set\Integers::above(1))
             ->then(function($size) {
                 $chunks = Str::of(\file_get_contents('fixtures/post.txt'))->chunk($size);
-                $parse = new Parse(new Clock);
+                $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
 
                 $request = $parse($chunks)->match(
                     static fn($request) => $request,
@@ -157,7 +158,7 @@ class ParseTest extends TestCase
             ->forAll(Set\Integers::above(1))
             ->then(function($size) {
                 $chunks = Str::of(\file_get_contents('fixtures/unbounded-post.txt'))->chunk($size);
-                $parse = new Parse(new Clock);
+                $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
 
                 $request = $parse($chunks)->match(
                     static fn($request) => $request,

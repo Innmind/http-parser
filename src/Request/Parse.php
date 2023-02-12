@@ -5,6 +5,7 @@ namespace Innmind\HttpParser\Request;
 
 use Innmind\TimeContinuum\Clock;
 use Innmind\Http\Message\Request;
+use Innmind\Stream\Capabilities;
 use Innmind\Immutable\{
     Sequence,
     Str,
@@ -14,10 +15,12 @@ use Innmind\Immutable\{
 final class Parse
 {
     private Clock $clock;
+    private Capabilities $capabilities;
 
-    public function __construct(Clock $clock)
+    public function __construct(Clock $clock, Capabilities $capabilities)
     {
         $this->clock = $clock;
+        $this->capabilities = $capabilities;
     }
 
     /**
@@ -29,7 +32,7 @@ final class Parse
     {
         return $chunks
             ->reduce(
-                Buffer::new($this->clock),
+                Buffer::new($this->clock, $this->capabilities),
                 static fn(Buffer $buffer, $chunk) => $buffer->add($chunk),
             )
             ->finish();

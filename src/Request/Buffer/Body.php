@@ -8,6 +8,7 @@ use Innmind\Http\{
     Message\Method,
     ProtocolVersion,
     Headers,
+    Header\ContentLength,
 };
 use Innmind\Filesystem\File\Content;
 use Innmind\Url\Url;
@@ -22,19 +23,26 @@ final class Body implements State
     private Url $url;
     private ProtocolVersion $protocol;
     private Headers $headers;
+    /** @var Maybe<0|positive-int> */
+    private Maybe $length;
     private Str $body;
 
+    /**
+     * @param Maybe<0|positive-int> $length
+     */
     private function __construct(
         Method $method,
         Url $url,
         ProtocolVersion $protocol,
         Headers $headers,
+        Maybe $length,
         Str $body,
     ) {
         $this->method = $method;
         $this->url = $url;
         $this->protocol = $protocol;
         $this->headers = $headers;
+        $this->length = $length;
         $this->body = $body;
     }
 
@@ -44,17 +52,38 @@ final class Body implements State
         ProtocolVersion $protocol,
         Headers $headers,
     ): self {
-        return new self($method, $url, $protocol, $headers, Str::of(''));
+        /** @var Maybe<0|positive-int> */
+        $length = $headers
+            ->find(ContentLength::class)
+            ->flatMap(static fn($header) => $header->values()->find(static fn() => true)) // first
+            ->map(static fn($length) => (int) $length->toString()) // at this moment the header doesn't expose directly the int
+            ->filter(static fn($length) => $length >= 0);
+
+        return new self(
+            $method,
+            $url,
+            $protocol,
+            $headers,
+            $length,
+            Str::of(''),
+        );
     }
 
     public function add(Str $chunk): self
     {
+        $body = $this->body->append($chunk->toString());
+        $body = $this->length->match(
+            static fn($length) => $body->take($length),
+            static fn() => $body,
+        );
+
         return new self(
             $this->method,
             $this->url,
             $this->protocol,
             $this->headers,
-            $this->body->append($chunk->toString()),
+            $this->length,
+            $body,
         );
     }
 

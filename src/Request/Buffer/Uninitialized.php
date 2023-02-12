@@ -66,7 +66,7 @@ final class Uninitialized implements State
             ->split("\n")
             ->match(
                 fn($header, $rest) => $this
-                    ->parseHeader($header)
+                    ->parseHeader($header->rightTrim("\r"))
                     ->match(
                         fn($info) => Headers::new(
                             $this->factory,

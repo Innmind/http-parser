@@ -90,7 +90,7 @@ final class Headers implements State
 
     public function finish(): Maybe
     {
-        if (!$this->buffer->empty()) {
+        if (!$this->buffer->rightTrim("\r")->empty()) {
             /** @var Maybe<Request> */
             return Maybe::nothing();
         }
@@ -113,7 +113,7 @@ final class Headers implements State
         return $buffer
             ->split("\n")
             ->match(
-                fn($header, $rest) => match ($header->empty()) {
+                fn($header, $rest) => match ($header->rightTrim("\r")->empty()) {
                     true => $this->body(Str::of("\n")->join($rest->map(
                         static fn($part) => $part->toString(),
                     ))),

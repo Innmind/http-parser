@@ -6,6 +6,7 @@ namespace Innmind\HttpParser\ServerRequest;
 use Innmind\Http\{
     Message\Request,
     Message\ServerRequest,
+    Message,
     Header,
 };
 use Innmind\Url\{
@@ -13,6 +14,7 @@ use Innmind\Url\{
     Authority\UserInformation,
     Authority\UserInformation\User,
     Authority\UserInformation\Password,
+    Query,
 };
 use Innmind\Immutable\{
     Str,
@@ -70,12 +72,22 @@ final class Transform
             $url = $url->withAuthority($authority);
         }
 
+        $query = null;
+
+        if (!$url->query()->equals(Query::none())) {
+            \parse_str($url->query()->toString(), $query);
+            $query = Message\Query::of($query);
+        }
+
         return new ServerRequest\ServerRequest(
             $url,
             $request->method(),
             $request->protocolVersion(),
             $headers,
             $request->body(),
+            null,
+            null,
+            $query,
         );
     }
 }

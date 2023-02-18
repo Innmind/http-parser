@@ -14,10 +14,7 @@ use Innmind\Url\{
     Authority\UserInformation\User,
     Authority\UserInformation\Password,
 };
-use Innmind\Immutable\{
-    Str,
-    Predicate\Instance,
-};
+use Innmind\Immutable\Str;
 
 final class Transform
 {
@@ -32,12 +29,10 @@ final class Transform
             $authority = $url->authority();
             $authority = $headers
                 ->find(Header\Host::class)
-                ->flatMap(static fn($header) => $header->values()->find(static fn() => true))
-                ->keep(Instance::of(Header\HostValue::class))
                 ->match(
-                    static fn($value) => $authority
-                        ->withHost($value->host())
-                        ->withPort($value->port()),
+                    static fn($header) => $authority
+                        ->withHost($header->host())
+                        ->withPort($header->port()),
                     static fn() => $authority,
                 );
             $url = $url->withAuthority($authority);
@@ -47,8 +42,6 @@ final class Transform
             $authority = $url->authority();
             $authority = $headers
                 ->find(Header\Authorization::class)
-                ->flatMap(static fn($header) => $header->values()->find(static fn() => true))
-                ->keep(Instance::of(Header\AuthorizationValue::class))
                 ->filter(static fn($authorization) => $authorization->scheme() === 'Basic')
                 ->map(static fn($authorization) => \base64_decode($authorization->parameter(), true) ?: '')
                 ->map(Str::of(...))

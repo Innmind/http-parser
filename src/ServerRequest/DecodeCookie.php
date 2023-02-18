@@ -7,9 +7,9 @@ use Innmind\Http\{
     Message\ServerRequest,
     Message\Cookies,
     Header\Cookie,
-    Header\CookieValue,
+    Header\Parameter,
 };
-use Innmind\Immutable\Predicate\Instance;
+use Innmind\Immutable\Map;
 
 final class DecodeCookie
 {
@@ -18,16 +18,18 @@ final class DecodeCookie
         return $request
             ->headers()
             ->find(Cookie::class)
-            ->flatMap(static fn($header) => $header->values()->find(static fn() => true))
-            ->keep(Instance::of(CookieValue::class))
+            ->map(static fn($cookie) => $cookie->parameters())
             ->match(
-                fn($cookie) => $this->decode($cookie, $request),
+                fn($parameters) => $this->decode($parameters, $request),
                 static fn() => $request,
             );
     }
 
+    /**
+     * @param Map<string, Parameter> $parameters
+     */
     private function decode(
-        CookieValue $cookie,
+        Map $parameters,
         ServerRequest $request,
     ): ServerRequest {
         return new ServerRequest\ServerRequest(
@@ -37,7 +39,7 @@ final class DecodeCookie
             $request->headers(),
             $request->body(),
             $request->environment(),
-            new Cookies($cookie->parameters()->map(
+            new Cookies($parameters->map(
                 static fn($_, $parameter) => $parameter->value(),
             )),
             $request->query(),

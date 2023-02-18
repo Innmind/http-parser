@@ -10,7 +10,6 @@ use Innmind\Http\{
     Header\ContentTypeValue,
 };
 use Innmind\Filesystem\File\Content;
-use Innmind\Immutable\Predicate\Instance;
 
 final class DecodeForm
 {
@@ -19,8 +18,7 @@ final class DecodeForm
         return $request
             ->headers()
             ->find(ContentType::class)
-            ->flatMap(static fn($header) => $header->values()->find(static fn() => true))
-            ->keep(Instance::of(ContentTypeValue::class))
+            ->map(static fn($header) => $header->content())
             ->match(
                 fn($value) => $this->decode($value, $request),
                 static fn() => $request,

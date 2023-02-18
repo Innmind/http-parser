@@ -65,9 +65,7 @@ final class Body implements State
         /** @var Maybe<0|positive-int> */
         $length = $headers
             ->find(ContentLength::class)
-            ->flatMap(static fn($header) => $header->values()->find(static fn() => true)) // first
-            ->map(static fn($length) => (int) $length->toString()) // at this moment the header doesn't expose directly the int
-            ->filter(static fn($length) => $length >= 0);
+            ->map(static fn($header) => $header->length());
 
         return new self(
             $method,

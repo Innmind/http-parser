@@ -60,14 +60,14 @@ final class Headers implements State
     }
 
     /**
-     * @return Fold<null, Request, State>         
+     * @return Fold<null, Request, State>
      */
-    private function parse(Str $buffer): Fold 
+    private function parse(Str $buffer): Fold
     {
-        return $buffer 
+        return $buffer
             ->split("\n")
             ->match(
-                fn($line, $rest) => $this 
+                fn($line, $rest) => $this
                     ->parseHeader($line->rightTrim("\n"))
                     ->map(fn($header) => $this->augment($header))
                     ->map(fn($request) => self::new(
@@ -88,9 +88,9 @@ final class Headers implements State
     }
 
     /**
-     * @return Maybe<Header>       
+     * @return Maybe<Header>
      */
-    private function parseHeader(Str $header): Maybe 
+    private function parseHeader(Str $header): Maybe
     {
         $captured = $header->capture('~^(?<name>[a-zA-Z0-9\-\_\.]+): (?<value>.*)$~');
 

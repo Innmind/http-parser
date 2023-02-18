@@ -25,7 +25,7 @@ class Parse2Test extends TestCase
 
     public function testParseGet()
     {
-        $this 
+        $this
             ->forAll(Set\Integers::between(1, 8192))
             ->then(function($size) {
                 $streams = Streams::fromAmbientAuthority();

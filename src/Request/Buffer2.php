@@ -33,7 +33,7 @@ final class Buffer2
         );
     }
 
-    public static function new($clock): self
+    public static function new(Clock $clock): self
     {
         return new self(FirstLine::new($clock));
     }

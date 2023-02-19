@@ -83,6 +83,44 @@ class ParseTest extends TestCase
             });
     }
 
+    public function testParseGetAllAtOnce()
+    {
+        $content = Str::of("GET /foo HTTP/1.1\r\n")
+            ->append("Host: localhost:8080\r\n")
+            ->append("Upgrade-Insecure-Requests: 1\r\n")
+            ->append("Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n")
+            ->append("User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15\r\n")
+            ->append("Accept-Language: en-GB,en;q=0.9\r\n")
+            ->append("Accept-Encoding: gzip, deflate\r\n")
+            ->append("Connection: keep-alive\r\n")
+            ->append("\r\n");
+        $streams = Streams::fromAmbientAuthority();
+        $stream = $streams
+            ->temporary()
+            ->new()
+            ->write($content)
+            ->flatMap(static fn($stream) => $stream->rewind())
+            ->match(
+                static fn($stream) => $stream,
+                static fn() => null,
+            );
+        $chunks = IO::of($streams->watch()->waitForever(...))
+            ->readable()
+            ->wrap($stream)
+            ->chunks(8192);
+
+        $request = Parse::of($streams, new Clock)($chunks)->match(
+            static fn($request) => $request,
+            static fn() => null,
+        );
+
+        $this->assertInstanceOf(Request::class, $request);
+        $this->assertSame(Method::get, $request->method());
+        $this->assertSame('/foo', $request->url()->toString());
+        $this->assertSame(ProtocolVersion::v11, $request->protocolVersion());
+        $this->assertCount(7, $request->headers());
+    }
+
     public function testParsePost()
     {
         $this
@@ -243,6 +281,7 @@ class ParseTest extends TestCase
                 Accept-Encoding: gzip, deflate\r
                 Connection: Keep-Alive\r
                 \r
+
                 RAW;
                 $streams = Streams::fromAmbientAuthority();
                 $chunks = IO::of($streams->watch()->waitForever(...))
@@ -290,6 +329,7 @@ class ParseTest extends TestCase
                 \r
                 some[key]=value&foo=bar\r
                 \r
+
                 RAW;
                 $streams = Streams::fromAmbientAuthority();
                 $chunks = IO::of($streams->watch()->waitForever(...))
@@ -338,6 +378,7 @@ class ParseTest extends TestCase
         \r
         some[key]=value&foo=bar\r
         \r
+
         RAW;
         $streams = Streams::fromAmbientAuthority();
         // first chunk ending in the middle of line between the headers and

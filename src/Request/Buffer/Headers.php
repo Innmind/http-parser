@@ -6,6 +6,7 @@ namespace Innmind\HttpParser\Request\Buffer;
 use Innmind\Stream\Capabilities;
 use Innmind\Http\{
     Message\Request,
+    Message\Method,
     Header,
     Header\ContentLength,
     Factory\Header\TryFactory,
@@ -44,22 +45,16 @@ final class Headers implements State
             $buffer->empty() ||
             $buffer->equals(Str::of("\r"))
         ) {
-            // Transfer-Encoding parsing is not supported yet, this means that a
-            // message with a body but without a Content-Length may not be parsed
             /** @var Fold<null, Request, State> */
-            return $this
-                ->request
-                ->headers()
-                ->find(ContentLength::class)
-                ->match(
-                    fn() => Fold::with(new self( // wait for new line before switching to parsing the body
-                        $this->capabilities,
-                        $this->factory,
-                        $this->request,
-                        $buffer,
-                    )),
-                    fn() => Fold::result($this->request),
-                );
+            return match ($this->expectBody($buffer)) {
+                true => Fold::with(new self( // wait for new line before switching to parsing the body
+                    $this->capabilities,
+                    $this->factory,
+                    $this->request,
+                    $buffer,
+                )),
+                false => Fold::result($this->request),
+            };
         }
 
         if ($buffer->contains("\n")) {
@@ -173,6 +168,11 @@ final class Headers implements State
         $buffer = Str::of("\n")->join($rest->map(
             static fn($line) => $line->toString(),
         ));
+
+        if (!$this->expectBody($buffer)) {
+            return Fold::result($this->request);
+        }
+
         $body = Body::new($this->capabilities, $this->request);
 
         /** @var Fold<null, Request, State> */
@@ -180,5 +180,27 @@ final class Headers implements State
             true => Fold::with($body),
             false => $body($buffer),
         };
+    }
+
+    private function expectBody(Str $buffer): bool
+    {
+        if (!$buffer->empty()) {
+            return true;
+        }
+
+        // Transfer-Encoding parsing is not supported yet, this means that a
+        // message with a body but without a Content-Length may not be parsed
+        return $this
+            ->request
+            ->headers()
+            ->find(ContentLength::class)
+            ->match(
+                static fn() => true,
+                fn() => !\in_array(
+                    $this->request->method(),
+                    [Method::get, Method::head, Method::options],
+                    true,
+                ),
+            );
     }
 }

@@ -205,7 +205,14 @@ final class Headers implements State
 
         return !\in_array(
             $this->request->method(),
-            [Method::get, Method::head, Method::options],
+            [
+                Method::get,
+                Method::head,
+                Method::options,
+                Method::trace,
+                Method::connect,
+                Method::delete,
+            ],
             true,
         );
     }

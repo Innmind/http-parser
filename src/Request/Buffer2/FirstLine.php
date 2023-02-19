@@ -71,7 +71,7 @@ final class FirstLine implements State
             ->split("\n")
             ->match(
                 fn($firstLine, $rest) => $this
-                    ->parseHeader($firstLine->rightTrim("\n"))
+                    ->parseHeader($firstLine->rightTrim("\r"))
                     ->map(fn($request) => Headers::new(
                         $this->capabilities,
                         $this->factory,

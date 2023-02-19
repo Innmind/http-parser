@@ -7,6 +7,7 @@ use Innmind\Stream\Capabilities;
 use Innmind\Http\{
     Message\Request,
     Header,
+    Header\ContentLength,
     Factory\Header\TryFactory,
 };
 use Innmind\Immutable\{
@@ -44,7 +45,19 @@ final class Headers implements State
             $buffer->equals(Str::of("\r"))
         ) {
             /** @var Fold<null, Request, State> */
-            return Fold::result($this->request);
+            return $this
+                ->request
+                ->headers()
+                ->find(ContentLength::class)
+                ->match(
+                    fn() => Fold::with(new self( // wait for new line before switching to parsing the body
+                        $this->capabilities,
+                        $this->factory,
+                        $this->request,
+                        $buffer,
+                    )),
+                    fn() => Fold::result($this->request),
+                );
         }
 
         if ($buffer->contains("\n")) {

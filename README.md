@@ -6,7 +6,7 @@
 
 Set of classes to parse any sequence of strings into [`innmind/http`](https://packagist.org/packages/innmind/http) objects.
 
-This is useful if you want to parse requests savec in files or build an http server.
+This is useful if you want to parse requests saved in files or build an http server.
 
 ## Installation
 

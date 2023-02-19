@@ -76,11 +76,22 @@ final class Headers implements State
                         $this->factory,
                         $request,
                     ))
-                    ->map(static fn($state) => $state(
-                        Str::of("\n")->join($rest->map(
+                    ->map(static function($state) use ($rest) {
+                        $buffer = Str::of("\n")->join($rest->map(
                             static fn($line) => $line->toString(),
-                        )),
-                    ))
+                        ));
+
+                        // do not call the state with an empty string otherwise
+                        // it will believe it is the empty line indicating the
+                        // end of headers
+                        // // this case happen when the buffer passed to ->parse()
+                        // ends with the new line character
+                        /** @var Fold<null, Request, State> */
+                        return match ($buffer->empty()) {
+                            true => Fold::with($state),
+                            false => $state($buffer),
+                        };
+                    })
                     ->match(
                         static fn($fold) => $fold,
                         static fn() => Fold::fail(null),

@@ -10,6 +10,8 @@ use Innmind\Http\{
     Message\Method,
     ProtocolVersion,
 };
+use Innmind\IO\IO;
+use Innmind\Url\Path;
 use Innmind\Stream\Streams;
 use Innmind\Immutable\Str;
 use PHPUnit\Framework\TestCase;
@@ -25,12 +27,15 @@ class ParseTest extends TestCase
     public function testParseGet()
     {
         $this
-            ->forAll(Set\Integers::above(1))
+            ->forAll(Set\Integers::between(1, 8192))
             ->then(function($size) {
-                $chunks = Str::of(\file_get_contents('fixtures/get.txt'))->chunk($size);
-                $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
+                $streams = Streams::fromAmbientAuthority();
+                $chunks = IO::of($streams->watch()->waitForever(...))
+                    ->readable()
+                    ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')))
+                    ->chunks($size);
 
-                $request = $parse($chunks)->match(
+                $request = (new Parse($streams, new Clock))($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -81,12 +86,15 @@ class ParseTest extends TestCase
     public function testParsePost()
     {
         $this
-            ->forAll(Set\Integers::above(1))
+            ->forAll(Set\Integers::between(1, 8192))
             ->then(function($size) {
-                $chunks = Str::of(\file_get_contents('fixtures/post.txt'))->chunk($size);
-                $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
+                $streams = Streams::fromAmbientAuthority();
+                $chunks = IO::of($streams->watch()->waitForever(...))
+                    ->readable()
+                    ->wrap($streams->readable()->open(Path::of('fixtures/post.txt')))
+                    ->chunks($size);
 
-                $request = $parse($chunks)->match(
+                $request = (new Parse($streams, new Clock))($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -155,12 +163,15 @@ class ParseTest extends TestCase
     public function testParseUnboundedPost()
     {
         $this
-            ->forAll(Set\Integers::above(1))
+            ->forAll(Set\Integers::between(1, 8192))
             ->then(function($size) {
-                $chunks = Str::of(\file_get_contents('fixtures/unbounded-post.txt'))->chunk($size);
-                $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
+                $streams = Streams::fromAmbientAuthority();
+                $chunks = IO::of($streams->watch()->waitForever(...))
+                    ->readable()
+                    ->wrap($streams->readable()->open(Path::of('fixtures/unbounded-post.txt')))
+                    ->chunks($size);
 
-                $request = $parse($chunks)->match(
+                $request = (new Parse($streams, new Clock))($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -213,7 +224,7 @@ class ParseTest extends TestCase
                     ),
                 );
                 $this->assertSame(
-                    "some[key]=value&foo=bar\n",
+                    'some[key]=value&foo=bar',
                     $request->body()->toString(),
                 );
             });
@@ -222,7 +233,7 @@ class ParseTest extends TestCase
     public function testParseGetWithBackslashR()
     {
         $this
-            ->forAll(Set\Integers::above(1))
+            ->forAll(Set\Integers::between(1, 8192))
             ->then(function($size) {
                 $raw = <<<RAW
                 GET /hello HTTP/1.1\r
@@ -233,10 +244,23 @@ class ParseTest extends TestCase
                 Connection: Keep-Alive\r
                 \r
                 RAW;
-                $chunks = Str::of($raw)->chunk($size);
-                $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
+                $streams = Streams::fromAmbientAuthority();
+                $chunks = IO::of($streams->watch()->waitForever(...))
+                    ->readable()
+                    ->wrap(
+                        $streams
+                            ->temporary()
+                            ->new()
+                            ->write(Str::of($raw))
+                            ->flatMap(static fn($stream) => $stream->rewind())
+                            ->match(
+                                static fn($stream) => $stream,
+                                static fn() => null,
+                            ),
+                    )
+                    ->chunks($size);
 
-                $request = $parse($chunks)->match(
+                $request = (new Parse($streams, new Clock))($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -252,7 +276,7 @@ class ParseTest extends TestCase
     public function testParsePostWithBackslashR()
     {
         $this
-            ->forAll(Set\Integers::above(1))
+            ->forAll(Set\Integers::between(1, 8192))
             ->then(function($size) {
                 $raw = <<<RAW
                 POST /some-form HTTP/1.1\r
@@ -267,10 +291,23 @@ class ParseTest extends TestCase
                 some[key]=value&foo=bar\r
                 \r
                 RAW;
-                $chunks = Str::of($raw)->chunk($size);
-                $parse = new Parse(new Clock, Streams::fromAmbientAuthority());
+                $streams = Streams::fromAmbientAuthority();
+                $chunks = IO::of($streams->watch()->waitForever(...))
+                    ->readable()
+                    ->wrap(
+                        $streams
+                            ->temporary()
+                            ->new()
+                            ->write(Str::of($raw))
+                            ->flatMap(static fn($stream) => $stream->rewind())
+                            ->match(
+                                static fn($stream) => $stream,
+                                static fn() => null,
+                            ),
+                    )
+                    ->chunks($size);
 
-                $request = $parse($chunks)->match(
+                $request = (new Parse($streams, new Clock))($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -285,5 +322,54 @@ class ParseTest extends TestCase
                     $request->body()->toString(),
                 );
             });
+    }
+
+    public function testParsePostWithBackslashRWithChunkEndingWithBackslashR()
+    {
+        $raw = <<<RAW
+        POST /some-form HTTP/1.1\r
+        User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)\r
+        Host: innmind.com\r
+        Content-Type: application/x-www-form-urlencoded\r
+        Content-Length: 23\r
+        Accept-Language: fr-fr\r
+        Accept-Encoding: gzip, deflate\r
+        Connection: Keep-Alive\r
+        \r
+        some[key]=value&foo=bar\r
+        \r
+        RAW;
+        $streams = Streams::fromAmbientAuthority();
+        // first chunk ending in the middle of line between the headers and
+        // the body
+        $chunks = IO::of($streams->watch()->waitForever(...))
+            ->readable()
+            ->wrap(
+                $streams
+                    ->temporary()
+                    ->new()
+                    ->write(Str::of($raw))
+                    ->flatMap(static fn($stream) => $stream->rewind())
+                    ->match(
+                        static fn($stream) => $stream,
+                        static fn() => null,
+                    ),
+            )
+            ->chunks(255);
+
+        $request = (new Parse($streams, new Clock))($chunks)->match(
+            static fn($request) => $request,
+            static fn() => null,
+        );
+
+        $this->assertInstanceOf(Request::class, $request);
+        $this->assertSame(Method::post, $request->method());
+        $this->assertSame('/some-form', $request->url()->toString());
+        $this->assertSame(ProtocolVersion::v11, $request->protocolVersion());
+        $this->assertCount(7, $request->headers());
+        $this->assertSame(
+            'some[key]=value&foo=bar',
+            $request->body()->toString(),
+        );
     }
 }

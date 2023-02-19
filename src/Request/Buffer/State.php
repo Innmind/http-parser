@@ -5,16 +5,14 @@ namespace Innmind\HttpParser\Request\Buffer;
 
 use Innmind\Http\Message\Request;
 use Innmind\Immutable\{
-    Maybe,
+    Fold,
     Str,
 };
 
 interface State
 {
-    public function add(Str $chunk): self;
-
     /**
-     * @return Maybe<Request>
+     * @return Fold<null, Request, self>
      */
-    public function finish(): Maybe;
+    public function __invoke(Str $chunk): Fold;
 }

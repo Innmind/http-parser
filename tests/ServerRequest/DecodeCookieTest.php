@@ -9,18 +9,23 @@ use Innmind\HttpParser\{
     Request\Parse,
 };
 use Innmind\TimeContinuum\Earth\Clock;
+use Innmind\IO\IO;
 use Innmind\Stream\Streams;
+use Innmind\Url\Path;
 use Innmind\Http\Message\ServerRequest;
-use Innmind\Immutable\Str;
 use PHPUnit\Framework\TestCase;
 
 class DecodeCookieTest extends TestCase
 {
     public function testDecode()
     {
-        $request = (new Parse(new Clock, Streams::fromAmbientAuthority()))(
-            Str::of(\file_get_contents('fixtures/cookie.txt'))->chunk(10),
-        )
+        $streams = Streams::fromAmbientAuthority();
+        $chunks = IO::of($streams->watch()->waitForever(...))
+            ->readable()
+            ->wrap($streams->readable()->open(Path::of('fixtures/cookie.txt')))
+            ->chunks(10);
+
+        $request = (new Parse($streams, new Clock))($chunks)
             ->map(new Transform)
             ->map(new DecodeCookie)
             ->match(
@@ -55,9 +60,13 @@ class DecodeCookieTest extends TestCase
 
     public function testDecodeWhenNoCookieHeader()
     {
-        $request = (new Parse(new Clock, Streams::fromAmbientAuthority()))(
-            Str::of(\file_get_contents('fixtures/get.txt'))->chunk(10),
-        )
+        $streams = Streams::fromAmbientAuthority();
+        $chunks = IO::of($streams->watch()->waitForever(...))
+            ->readable()
+            ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')))
+            ->chunks(10);
+
+        $request = (new Parse($streams, new Clock))($chunks)
             ->map(new Transform)
             ->map(new DecodeCookie)
             ->match(

@@ -3,190 +3,182 @@ declare(strict_types = 1);
 
 namespace Innmind\HttpParser\Request\Buffer;
 
+use Innmind\Stream\Capabilities;
 use Innmind\Http\{
     Message\Request,
-    Message\Method,
-    ProtocolVersion,
     Header,
-    Headers as Container,
+    Header\ContentLength,
     Factory\Header\TryFactory,
 };
-use Innmind\Stream\Capabilities;
-use Innmind\Url\Url;
 use Innmind\Immutable\{
-    Maybe,
+    Fold,
     Str,
+    Maybe,
     Sequence,
-    Map,
 };
 
 final class Headers implements State
 {
-    private TryFactory $factory;
     private Capabilities $capabilities;
-    private Method $method;
-    private Url $url;
-    private ProtocolVersion $protocol;
+    private TryFactory $factory;
+    private Request $request;
     private Str $buffer;
-    /** @var Sequence<Str> */
-    private Sequence $headers;
 
-    /**
-     * @param Sequence<Str> $headers
-     */
     private function __construct(
-        TryFactory $factory,
         Capabilities $capabilities,
-        Method $method,
-        Url $url,
-        ProtocolVersion $protocol,
+        TryFactory $factory,
+        Request $request,
         Str $buffer,
-        Sequence $headers,
     ) {
-        $this->factory = $factory;
         $this->capabilities = $capabilities;
-        $this->method = $method;
-        $this->url = $url;
-        $this->protocol = $protocol;
+        $this->factory = $factory;
+        $this->request = $request;
         $this->buffer = $buffer;
-        $this->headers = $headers;
     }
 
-    public static function new(
-        TryFactory $factory,
-        Capabilities $capabilities,
-        Method $method,
-        Url $url,
-        ProtocolVersion $protocol,
-    ): self {
-        return new self(
-            $factory,
-            $capabilities,
-            $method,
-            $url,
-            $protocol,
-            Str::of('', 'ASCII'),
-            Sequence::of(),
-        );
-    }
-
-    public function add(Str $chunk): State
+    public function __invoke(Str $chunk): Fold
     {
         $buffer = $this->buffer->append($chunk->toString());
 
-        return match ($buffer->contains("\n")) {
-            true => $this->parse($buffer),
-            false => new self(
-                $this->factory,
-                $this->capabilities,
-                $this->method,
-                $this->url,
-                $this->protocol,
-                $buffer,
-                $this->headers,
-            ),
-        };
-    }
-
-    public function finish(): Maybe
-    {
-        if (!$this->buffer->rightTrim("\r")->empty()) {
-            /** @var Maybe<Request> */
-            return Maybe::nothing();
+        if (
+            $buffer->empty() ||
+            $buffer->equals(Str::of("\r"))
+        ) {
+            // Transfer-Encoding parsing is not supported yet, this means that a
+            // message with a body but without a Content-Length may not be parsed
+            /** @var Fold<null, Request, State> */
+            return $this
+                ->request
+                ->headers()
+                ->find(ContentLength::class)
+                ->match(
+                    fn() => Fold::with(new self( // wait for new line before switching to parsing the body
+                        $this->capabilities,
+                        $this->factory,
+                        $this->request,
+                        $buffer,
+                    )),
+                    fn() => Fold::result($this->request),
+                );
         }
 
-        /** @var Maybe<Request> */
-        return $this
-            ->headers()
-            ->map(fn($headers) => new Request\Request(
-                $this->url,
-                $this->method,
-                $this->protocol,
-                $headers,
-            ));
+        if ($buffer->contains("\n")) {
+            return $this->parse($buffer);
+        }
+
+        /** @var Fold<null, Request, State> */
+        return Fold::with(new self(
+            $this->capabilities,
+            $this->factory,
+            $this->request,
+            $buffer,
+        ));
     }
 
-    private function parse(Str $buffer): State
-    {
-        // by adding an empty chunk at the end will recursively parse the
-        // headers while there is a new line in the buffer
-        return $buffer
-            ->split("\n")
-            ->match(
-                fn($header, $rest) => match ($header->rightTrim("\r")->empty()) {
-                    true => $this->body(Str::of("\n")->join($rest->map(
-                        static fn($part) => $part->toString(),
-                    ))),
-                    false => new self(
-                        $this->factory,
-                        $this->capabilities,
-                        $this->method,
-                        $this->url,
-                        $this->protocol,
-                        Str::of("\n")->join($rest->map(
-                            static fn($part) => $part->toString(),
-                        )),
-                        ($this->headers)($header),
-                    ),
-                },
-                fn() => $this->body(),
-            )
-            ->add(Str::of(''));
+    public static function new(
+        Capabilities $capabilities,
+        TryFactory $factory,
+        Request $request,
+    ): self {
+        return new self(
+            $capabilities,
+            $factory,
+            $request,
+            Str::of('', 'ASCII'),
+        );
     }
 
     /**
-     * @return Maybe<Container>
+     * @return Fold<null, Request, State>
      */
-    private function headers(): Maybe
+    private function parse(Str $buffer): Fold
     {
-        /**
-         * @psalm-suppress NamedArgumentNotAllowed
-         * Technically as header name can contain any octet between 0 and 127
-         * except control ones, the regexp below is a bit more restrictive than
-         * that by only accepting letters, numbers, '-', '_' and '.'
-         * @see https://www.rfc-editor.org/rfc/rfc2616#section-4.2
-         */
-        return $this
-            ->headers
-            ->map(static fn($header) => $header->rightTrim("\r"))
-            ->map(static fn($header) => $header->capture('~^(?<name>[a-zA-Z0-9\-\_\.]+): (?<value>.*)$~'))
-            ->map(fn($captured) => $this->createHeader($captured))
+        return $buffer
+            ->split("\n")
             ->match(
-                static fn($first, $rest) => Maybe::all($first, ...$rest->toList())->map(
-                    static fn(Header ...$headers) => Container::of(...$headers),
-                ),
-                static fn() => Maybe::just(Container::of()),
+                fn($line, $rest) => match ($line->rightTrim("\r")->empty()) {
+                    true => $this->parseBody($rest),
+                    false => $this->parseLine($line, $rest),
+                },
+                static fn() => Fold::fail(null),
             );
     }
 
     /**
-     * @param Map<int|string, Str> $info
-     *
      * @return Maybe<Header>
      */
-    private function createHeader(Map $info): Maybe
+    private function parseHeader(Str $header): Maybe
     {
-        return Maybe::all($info->get('name'), $info->get('value'))->map(
+        $captured = $header->capture('~^(?<name>[a-zA-Z0-9\-\_\.]+): (?<value>.*)$~');
+
+        return Maybe::all($captured->get('name'), $captured->get('value'))->map(
             fn(Str $name, Str $value) => ($this->factory)($name, $value),
         );
     }
 
-    private function body(Str $buffer = null): State
+    private function augment(Header $header): Request
     {
-        $buffer ??= Str::of('');
+        return new Request\Request(
+            $this->request->url(),
+            $this->request->method(),
+            $this->request->protocolVersion(),
+            $this->request->headers()($header),
+        );
+    }
 
+    /**
+     * @param Sequence<Str> $rest
+     *
+     * @return Fold<null, Request, State>
+     */
+    private function parseLine(Str $line, Sequence $rest): Fold
+    {
         return $this
-            ->headers()
-            ->map(fn($headers) => Body::new(
+            ->parseHeader($line->rightTrim("\n"))
+            ->map(fn($header) => $this->augment($header))
+            ->map(fn($request) => self::new(
                 $this->capabilities,
-                $this->method,
-                $this->url,
-                $this->protocol,
-                $headers,
+                $this->factory,
+                $request,
             ))
+            ->map(static function($state) use ($rest) {
+                $buffer = Str::of("\n")->join($rest->map(
+                    static fn($line) => $line->toString(),
+                ));
+
+                // do not call the state with an empty string otherwise
+                // it will believe it is the empty line indicating the
+                // end of headers
+                // // this case happen when the buffer passed to ->parse()
+                // ends with the new line character
+                /** @var Fold<null, Request, State> */
+                return match ($buffer->empty()) {
+                    true => Fold::with($state),
+                    false => $state($buffer),
+                };
+            })
             ->match(
-                static fn($body) => $body->add($buffer),
-                static fn() => new Failure,
+                static fn($fold) => $fold,
+                static fn() => Fold::fail(null),
             );
+    }
+
+    /**
+     * @param Sequence<Str> $rest
+     *
+     * @return Fold<null, Request, State>
+     */
+    private function parseBody(Sequence $rest): Fold
+    {
+        $buffer = Str::of("\n")->join($rest->map(
+            static fn($line) => $line->toString(),
+        ));
+        $body = Body::new($this->capabilities, $this->request);
+
+        /** @var Fold<null, Request, State> */
+        return match ($buffer->empty()) {
+            true => Fold::with($body),
+            false => $body($buffer),
+        };
     }
 }

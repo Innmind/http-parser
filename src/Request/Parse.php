@@ -4,37 +4,40 @@ declare(strict_types = 1);
 namespace Innmind\HttpParser\Request;
 
 use Innmind\TimeContinuum\Clock;
-use Innmind\Http\Message\Request;
 use Innmind\Stream\Capabilities;
+use Innmind\Http\Message\Request;
+use Innmind\IO\Readable\Chunks;
 use Innmind\Immutable\{
-    Sequence,
-    Str,
     Maybe,
+    Fold,
 };
 
 final class Parse
 {
-    private Clock $clock;
     private Capabilities $capabilities;
+    private Clock $clock;
 
-    public function __construct(Clock $clock, Capabilities $capabilities)
-    {
-        $this->clock = $clock;
+    public function __construct(
+        Capabilities $capabilities,
+        Clock $clock,
+    ) {
         $this->capabilities = $capabilities;
+        $this->clock = $clock;
     }
 
     /**
-     * @param Sequence<Str> $chunks
-     *
      * @return Maybe<Request>
      */
-    public function __invoke(Sequence $chunks): Maybe
+    public function __invoke(Chunks $chunks): Maybe
     {
+        /** @var Fold<null, Request, Buffer> */
+        $fold = Fold::with(Buffer::new($this->capabilities, $this->clock));
+
         return $chunks
-            ->reduce(
-                Buffer::new($this->clock, $this->capabilities),
-                static fn(Buffer $buffer, $chunk) => $buffer->add($chunk),
+            ->fold(
+                $fold,
+                static fn(Buffer $buffer, $chunk) => $buffer($chunk),
             )
-            ->finish();
+            ->flatMap(static fn($result) => $result->maybe());
     }
 }

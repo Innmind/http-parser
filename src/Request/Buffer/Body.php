@@ -3,120 +3,204 @@ declare(strict_types = 1);
 
 namespace Innmind\HttpParser\Request\Buffer;
 
-use Innmind\Http\{
-    Message\Request,
-    Message\Method,
-    ProtocolVersion,
-    Headers,
-    Header\ContentLength,
-};
-use Innmind\Filesystem\File\Content;
 use Innmind\Stream\{
     Capabilities,
     Bidirectional,
 };
-use Innmind\Url\Url;
+use Innmind\Http\{
+    Message\Request,
+    Header\ContentLength,
+};
+use Innmind\Filesystem\File\Content;
 use Innmind\Immutable\{
-    Maybe,
+    Fold,
     Str,
+    Maybe,
+    Predicate\Instance,
 };
 
 final class Body implements State
 {
-    private Method $method;
-    private Url $url;
-    private ProtocolVersion $protocol;
-    private Headers $headers;
-    /** @var Maybe<0|positive-int> */
-    private Maybe $length;
+    private Request $request;
     private Bidirectional $body;
+    /** @var Maybe<0|positive-int> */
+    private Maybe $expectedLength;
     /** @var 0|positive-int */
     private int $accumulated;
+    private Str $buffer;
 
     /**
-     * @param Maybe<0|positive-int> $length
+     * @param Maybe<0|positive-int> $expectedLength
      * @param 0|positive-int $accumulated
      */
     private function __construct(
-        Method $method,
-        Url $url,
-        ProtocolVersion $protocol,
-        Headers $headers,
-        Maybe $length,
+        Request $request,
         Bidirectional $body,
+        Maybe $expectedLength,
         int $accumulated,
+        Str $buffer,
     ) {
-        $this->method = $method;
-        $this->url = $url;
-        $this->protocol = $protocol;
-        $this->headers = $headers;
-        $this->length = $length;
+        $this->request = $request;
         $this->body = $body;
+        $this->expectedLength = $expectedLength;
         $this->accumulated = $accumulated;
+        $this->buffer = $buffer;
+    }
+
+    public function __invoke(Str $chunk): Fold
+    {
+        $chunk = $this->buffer->append($chunk->toString());
+        $length = $this->expectedLength->match(
+            static fn($length) => $length,
+            static fn() => null,
+        );
+
+        if (\is_int($length)) {
+            return $this->accumulateUpTo($chunk, $length);
+        }
+
+        if ($chunk->contains("\n") || $chunk->contains("\r")) {
+            return $this->buffer($chunk);
+        }
+
+        return $this->accumulate($chunk);
     }
 
     public static function new(
         Capabilities $capabilities,
-        Method $method,
-        Url $url,
-        ProtocolVersion $protocol,
-        Headers $headers,
+        Request $request,
     ): self {
-        /** @var Maybe<0|positive-int> */
-        $length = $headers
-            ->find(ContentLength::class)
-            ->map(static fn($header) => $header->length());
-
         return new self(
-            $method,
-            $url,
-            $protocol,
-            $headers,
-            $length,
+            $request,
             $capabilities->temporary()->new(),
+            $request
+                ->headers()
+                ->find(ContentLength::class)
+                ->map(static fn($header) => $header->length()),
             0,
+            Str::of('', 'ASCII'),
         );
     }
 
-    public function add(Str $chunk): State
+    /**
+     * @param 0|positive-int $length
+     *
+     * @return Fold<null, Request, State>
+     */
+    private function accumulateUpTo(Str $chunk, int $length): Fold
     {
-        $chunk = $chunk->toEncoding('ASCII');
-        $toWrite = $this
-            ->length
-            ->map(fn($length) => \max(0, $length - $this->accumulated))
-            ->match(
-                static fn($length) => $chunk->take($length),
-                static fn() => $chunk,
-            );
+        $toWrite = $chunk->take(\max(0, $length - $this->accumulated));
 
-        /** @psalm-suppress ArgumentTypeCoercion Due to write returning a Writable */
         return $this
-            ->body
-            ->write($toWrite)
-            ->map(fn(Bidirectional $body) => new self(
-                $this->method,
-                $this->url,
-                $this->protocol,
-                $this->headers,
-                $this->length,
+            ->body($toWrite)
+            ->map(fn($body) => new self(
+                $this->request,
                 $body,
+                $this->expectedLength,
                 $this->accumulated + $toWrite->length(),
+                Str::of('', 'ASCII'),
             ))
-            ->match(
-                static fn($self) => $self,
-                static fn() => new Failure, // failed to write to body
-            );
+            ->flatMap(static fn($self) => $self->checkLength($length));
     }
 
-    public function finish(): Maybe
+    /**
+     * @return Fold<null, Request, State>
+     */
+    private function buffer(Str $chunk): Fold
     {
-        /** @var Maybe<Request> */
-        return Maybe::just(new Request\Request(
-            $this->url,
-            $this->method,
-            $this->protocol,
-            $this->headers,
-            Content\OfStream::of($this->body),
-        ));
+        if ($chunk->endsWith("\n") || $chunk->endsWith("\r")) {
+            if ($chunk->endsWith("\n\n")) {
+                return $this->endWith($chunk->dropEnd(2));
+            }
+
+            if ($chunk->endsWith("\r\n\r\n")) {
+                return $this->endWith($chunk->dropEnd(4));
+            }
+
+            // wait for extra chunks to see if we're reaching the end of the body
+            /** @var Fold<null, Request, State> */
+            return Fold::with(new self(
+                $this->request,
+                $this->body,
+                $this->expectedLength,
+                $this->accumulated,
+                $chunk,
+            ));
+        }
+
+        return $this->accumulate($chunk);
+    }
+
+    /**
+     * @return Fold<null, Request, State>
+     */
+    private function endWith(Str $chunk): Fold
+    {
+        /** @var Fold<null, Request, State> */
+        return $this
+            ->body($chunk)
+            ->map(fn($body) => new Request\Request(
+                $this->request->url(),
+                $this->request->method(),
+                $this->request->protocolVersion(),
+                $this->request->headers(),
+                Content\OfStream::of($body),
+            ))
+            ->flatMap(static fn($request) => Fold::result($request));
+    }
+
+    /**
+     * @param 0|positive-int $length
+     *
+     * @return Fold<null, Request, State>
+     */
+    private function checkLength(int $length): Fold
+    {
+        if ($this->accumulated === $length) {
+            /** @var Fold<null, Request, State> */
+            return Fold::result(new Request\Request(
+                $this->request->url(),
+                $this->request->method(),
+                $this->request->protocolVersion(),
+                $this->request->headers(),
+                Content\OfStream::of($this->body),
+            ));
+        }
+
+        /** @var Fold<null, Request, State> */
+        return Fold::with($this);
+    }
+
+    /**
+     * @return Fold<null, Request, State>
+     */
+    private function accumulate(Str $chunk): Fold
+    {
+        /** @var Fold<null, Request, State> */
+        return $this
+            ->body($chunk)
+            ->map(fn($body) => new self(
+                $this->request,
+                $body,
+                $this->expectedLength,
+                $this->accumulated + $chunk->length(),
+                Str::of('', 'ASCII'),
+            ));
+    }
+
+    /**
+     * @return Fold<null, Request, Bidirectional>
+     */
+    private function body(Str $chunk): Fold
+    {
+        return $this
+            ->body
+            ->write($chunk)
+            ->maybe()
+            ->keep(Instance::of(Bidirectional::class))
+            ->match(
+                static fn($body) => Fold::with($body),
+                static fn() => Fold::fail(null), // failed to write to body or not bidirectional
+            );
     }
 }

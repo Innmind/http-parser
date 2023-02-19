@@ -5,13 +5,13 @@ namespace Innmind\HttpParser\Request;
 
 use Innmind\HttpParser\Request\Buffer\{
     State,
-    Uninitialized,
+    FirstLine,
 };
+use Innmind\Stream\Capabilities;
 use Innmind\TimeContinuum\Clock;
 use Innmind\Http\Message\Request;
-use Innmind\Stream\Capabilities;
 use Innmind\Immutable\{
-    Maybe,
+    Fold,
     Str,
 };
 
@@ -24,21 +24,20 @@ final class Buffer
         $this->state = $state;
     }
 
-    public static function new(Clock $clock, Capabilities $capabilities): self
-    {
-        return new self(Uninitialized::new($clock, $capabilities));
-    }
-
-    public function add(Str $chunk): self
-    {
-        return new self($this->state->add($chunk));
-    }
-
     /**
-     * @return Maybe<Request>
+     * @return Fold<null, Request, self>
      */
-    public function finish(): Maybe
+    public function __invoke(Str $chunk): Fold
     {
-        return $this->state->finish();
+        return ($this->state)($chunk)->map(
+            static fn($state) => new self($state),
+        );
+    }
+
+    public static function new(
+        Capabilities $capabilities,
+        Clock $clock,
+    ): self {
+        return new self(FirstLine::new($capabilities, $clock));
     }
 }

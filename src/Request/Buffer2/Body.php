@@ -60,20 +60,15 @@ final class Body implements State
             return $this->accumulateUpTo($chunk, $length);
         }
 
-        if ($tail->endsWith("\n\n")) {
-            return $this->endWith(
-                $chunk
-                    ->drop($this->tail->length()) // length already written to body
-                    ->dropEnd(2),
-            );
-        }
-
-        if ($tail->endsWith("\r\n\r\n")) {
-            return $this->endWith(
-                $chunk
-                    ->drop($this->tail->length()) // length already written to body
-                    ->dropEnd(4),
-            );
+        if (
+            $tail->endsWith("\n\n") ||
+            $tail->endsWith("\r\n\r\n")
+        ) {
+            // the body end marker is written to the body exposed in the returned
+            // request because depending on the length of the chunks we received
+            // part of this marker may already have been written to the body
+            // so to have a consistent behaviour the marker is always exposed
+            return $this->endWith($chunk);
         }
 
         return $this->accumulate($chunk);

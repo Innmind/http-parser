@@ -213,7 +213,7 @@ class ParseTest extends TestCase
                     ),
                 );
                 $this->assertSame(
-                    "some[key]=value&foo=bar\n",
+                    "some[key]=value&foo=bar\n\n",
                     $request->body()->toString(),
                 );
             });

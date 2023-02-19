@@ -38,6 +38,7 @@ final class Headers implements State
             $buffer->empty() ||
             $buffer->equals(Str::of("\r"))
         ) {
+            /** @var Fold<null, Request, State> */
             return Fold::result($this->request);
         }
 
@@ -45,6 +46,7 @@ final class Headers implements State
             return $this->parse($buffer);
         }
 
+        /** @var Fold<null, Request, State> */
         return Fold::with(new self(
             $this->factory,
             $this->request,

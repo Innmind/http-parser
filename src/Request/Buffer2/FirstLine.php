@@ -36,6 +36,7 @@ final class FirstLine implements State
     {
         $buffer = $this->buffer->append($chunk->toString());
 
+        /** @var Fold<null, Request, State> */
         return match ($buffer->contains("\n")) {
             false => Fold::with(new self($this->factory, $buffer)),
             true => $this->parse($buffer),
@@ -78,7 +79,7 @@ final class FirstLine implements State
     }
 
     /**
-     * @return Maybe<Request>
+     * @return Maybe<Request\Request>
      */
     private function parseHeader(Str $header): Maybe
     {

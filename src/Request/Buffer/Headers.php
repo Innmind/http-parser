@@ -190,17 +190,23 @@ final class Headers implements State
 
         // Transfer-Encoding parsing is not supported yet, this means that a
         // message with a body but without a Content-Length may not be parsed
-        return $this
+        $content = $this
             ->request
             ->headers()
             ->find(ContentLength::class)
             ->match(
-                static fn() => true,
-                fn() => !\in_array(
-                    $this->request->method(),
-                    [Method::get, Method::head, Method::options],
-                    true,
-                ),
+                static fn($header) => $header,
+                static fn() => null,
             );
+
+        if ($content) {
+            return $content->length() > 0;
+        }
+
+        return !\in_array(
+            $this->request->method(),
+            [Method::get, Method::head, Method::options],
+            true,
+        );
     }
 }

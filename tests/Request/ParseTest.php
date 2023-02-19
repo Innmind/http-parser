@@ -121,6 +121,40 @@ class ParseTest extends TestCase
         $this->assertCount(7, $request->headers());
     }
 
+    public function testParsePostWithoutABody()
+    {
+        $content = Str::of("POST /foo HTTP/1.1\r\n")
+            ->append("Host: localhost:8080\r\n")
+            ->append("Content-Length: 0\r\n")
+            ->append("Connection: close\r\n")
+            ->append("\r\n");
+        $streams = Streams::fromAmbientAuthority();
+        $stream = $streams
+            ->temporary()
+            ->new()
+            ->write($content)
+            ->flatMap(static fn($stream) => $stream->rewind())
+            ->match(
+                static fn($stream) => $stream,
+                static fn() => null,
+            );
+        $chunks = IO::of($streams->watch()->waitForever(...))
+            ->readable()
+            ->wrap($stream)
+            ->chunks(8192);
+
+        $request = Parse::of($streams, new Clock)($chunks)->match(
+            static fn($request) => $request,
+            static fn() => null,
+        );
+
+        $this->assertInstanceOf(Request::class, $request);
+        $this->assertSame(Method::post, $request->method());
+        $this->assertSame('/foo', $request->url()->toString());
+        $this->assertSame(ProtocolVersion::v11, $request->protocolVersion());
+        $this->assertCount(3, $request->headers());
+    }
+
     public function testParsePost()
     {
         $this

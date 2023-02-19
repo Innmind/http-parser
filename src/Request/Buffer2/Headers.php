@@ -44,6 +44,8 @@ final class Headers implements State
             $buffer->empty() ||
             $buffer->equals(Str::of("\r"))
         ) {
+            // Transfer-Encoding parsing is not supported yet, this means that a
+            // message with a body but without a Content-Length may not be parsed
             /** @var Fold<null, Request, State> */
             return $this
                 ->request

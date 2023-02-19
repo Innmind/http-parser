@@ -37,7 +37,7 @@ class DecodeQueryTest extends TestCase
                     $protocol,
                 );
 
-                $serverRequest = (new DecodeQuery)((new Transform)($request));
+                $serverRequest = DecodeQuery::of()(Transform::of()($request));
 
                 $this->assertSame(
                     'value',

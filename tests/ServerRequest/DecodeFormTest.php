@@ -25,9 +25,9 @@ class DecodeFormTest extends TestCase
             ->wrap($streams->readable()->open(Path::of('fixtures/post.txt')))
             ->chunks(10);
 
-        $request = (new Parse($streams, new Clock))($chunks)
-            ->map(new Transform)
-            ->map(new DecodeForm)
+        $request = Parse::of($streams, new Clock)($chunks)
+            ->map(Transform::of())
+            ->map(DecodeForm::of())
             ->match(
                 static fn($request) => $request,
                 static fn() => null,
@@ -66,9 +66,9 @@ class DecodeFormTest extends TestCase
             ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')))
             ->chunks(10);
 
-        $request = (new Parse($streams, new Clock))($chunks)
-            ->map(new Transform)
-            ->map(new DecodeForm)
+        $request = Parse::of($streams, new Clock)($chunks)
+            ->map(Transform::of())
+            ->map(DecodeForm::of())
             ->match(
                 static fn($request) => $request,
                 static fn() => null,

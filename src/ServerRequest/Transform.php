@@ -18,6 +18,10 @@ use Innmind\Immutable\Str;
 
 final class Transform
 {
+    private function __construct()
+    {
+    }
+
     public function __invoke(Request $request): ServerRequest
     {
         $url = $request->url();
@@ -72,5 +76,10 @@ final class Transform
             $headers,
             $request->body(),
         );
+    }
+
+    public static function of(): self
+    {
+        return new self;
     }
 }

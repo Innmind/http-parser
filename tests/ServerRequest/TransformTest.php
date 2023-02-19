@@ -44,7 +44,7 @@ class TransformTest extends TestCase
                     ),
                 );
 
-                $serverRequest = (new Transform)($request);
+                $serverRequest = Transform::of()($request);
 
                 $this->assertSame(
                     'innmind.com:8080/foo',
@@ -70,7 +70,7 @@ class TransformTest extends TestCase
                     ),
                 );
 
-                $serverRequest = (new Transform)($request);
+                $serverRequest = Transform::of()($request);
 
                 $this->assertSame(
                     'example.com:443/foo',
@@ -99,7 +99,7 @@ class TransformTest extends TestCase
                     ),
                 );
 
-                $serverRequest = (new Transform)($request);
+                $serverRequest = Transform::of()($request);
 
                 $this->assertSame(
                     'foo:bar@/foo',
@@ -127,7 +127,7 @@ class TransformTest extends TestCase
                     ),
                 );
 
-                $serverRequest = (new Transform)($request);
+                $serverRequest = Transform::of()($request);
 
                 $this->assertSame(
                     '/foo',
@@ -156,7 +156,7 @@ class TransformTest extends TestCase
                     ),
                 );
 
-                $serverRequest = (new Transform)($request);
+                $serverRequest = Transform::of()($request);
 
                 $this->assertSame(
                     'some:pwd@/foo',

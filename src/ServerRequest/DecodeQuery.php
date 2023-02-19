@@ -11,6 +11,10 @@ use Innmind\Url\Query;
 
 final class DecodeQuery
 {
+    private function __construct()
+    {
+    }
+
     public function __invoke(ServerRequest $request): ServerRequest
     {
         if ($request->url()->query()->equals(Query::none())) {
@@ -31,5 +35,10 @@ final class DecodeQuery
             $request->form(),
             $request->files(),
         );
+    }
+
+    public static function of(): self
+    {
+        return new self;
     }
 }

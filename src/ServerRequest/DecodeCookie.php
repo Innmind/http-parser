@@ -13,6 +13,10 @@ use Innmind\Immutable\Map;
 
 final class DecodeCookie
 {
+    private function __construct()
+    {
+    }
+
     public function __invoke(ServerRequest $request): ServerRequest
     {
         return $request
@@ -23,6 +27,11 @@ final class DecodeCookie
                 fn($parameters) => $this->decode($parameters, $request),
                 static fn() => $request,
             );
+    }
+
+    public static function of(): self
+    {
+        return new self;
     }
 
     /**

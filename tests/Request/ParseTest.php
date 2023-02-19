@@ -35,7 +35,7 @@ class ParseTest extends TestCase
                     ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')))
                     ->chunks($size);
 
-                $request = (new Parse($streams, new Clock))($chunks)->match(
+                $request = Parse::of($streams, new Clock)($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -94,7 +94,7 @@ class ParseTest extends TestCase
                     ->wrap($streams->readable()->open(Path::of('fixtures/post.txt')))
                     ->chunks($size);
 
-                $request = (new Parse($streams, new Clock))($chunks)->match(
+                $request = Parse::of($streams, new Clock)($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -171,7 +171,7 @@ class ParseTest extends TestCase
                     ->wrap($streams->readable()->open(Path::of('fixtures/unbounded-post.txt')))
                     ->chunks($size);
 
-                $request = (new Parse($streams, new Clock))($chunks)->match(
+                $request = Parse::of($streams, new Clock)($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -260,7 +260,7 @@ class ParseTest extends TestCase
                     )
                     ->chunks($size);
 
-                $request = (new Parse($streams, new Clock))($chunks)->match(
+                $request = Parse::of($streams, new Clock)($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -307,7 +307,7 @@ class ParseTest extends TestCase
                     )
                     ->chunks($size);
 
-                $request = (new Parse($streams, new Clock))($chunks)->match(
+                $request = Parse::of($streams, new Clock)($chunks)->match(
                     static fn($request) => $request,
                     static fn() => null,
                 );
@@ -357,7 +357,7 @@ class ParseTest extends TestCase
             )
             ->chunks(255);
 
-        $request = (new Parse($streams, new Clock))($chunks)->match(
+        $request = Parse::of($streams, new Clock)($chunks)->match(
             static fn($request) => $request,
             static fn() => null,
         );

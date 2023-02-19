@@ -25,9 +25,9 @@ class DecodeCookieTest extends TestCase
             ->wrap($streams->readable()->open(Path::of('fixtures/cookie.txt')))
             ->chunks(10);
 
-        $request = (new Parse($streams, new Clock))($chunks)
-            ->map(new Transform)
-            ->map(new DecodeCookie)
+        $request = Parse::of($streams, new Clock)($chunks)
+            ->map(Transform::of())
+            ->map(DecodeCookie::of())
             ->match(
                 static fn($request) => $request,
                 static fn() => null,
@@ -66,9 +66,9 @@ class DecodeCookieTest extends TestCase
             ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')))
             ->chunks(10);
 
-        $request = (new Parse($streams, new Clock))($chunks)
-            ->map(new Transform)
-            ->map(new DecodeCookie)
+        $request = Parse::of($streams, new Clock)($chunks)
+            ->map(Transform::of())
+            ->map(DecodeCookie::of())
             ->match(
                 static fn($request) => $request,
                 static fn() => null,

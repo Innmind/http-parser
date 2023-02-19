@@ -13,6 +13,10 @@ use Innmind\Filesystem\File\Content;
 
 final class DecodeForm
 {
+    private function __construct()
+    {
+    }
+
     public function __invoke(ServerRequest $request): ServerRequest
     {
         return $request
@@ -23,6 +27,11 @@ final class DecodeForm
                 fn($value) => $this->decode($value, $request),
                 static fn() => $request,
             );
+    }
+
+    public static function of(): self
+    {
+        return new self;
     }
 
     private function decode(

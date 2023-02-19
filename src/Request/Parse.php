@@ -17,7 +17,7 @@ final class Parse
     private Capabilities $capabilities;
     private Clock $clock;
 
-    public function __construct(
+    private function __construct(
         Capabilities $capabilities,
         Clock $clock,
     ) {
@@ -39,5 +39,12 @@ final class Parse
                 static fn(Buffer $buffer, $chunk) => $buffer($chunk),
             )
             ->flatMap(static fn($result) => $result->maybe());
+    }
+
+    public static function of(
+        Capabilities $capabilities,
+        Clock $clock,
+    ): self {
+        return new self($capabilities, $clock);
     }
 }

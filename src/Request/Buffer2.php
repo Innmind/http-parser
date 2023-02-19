@@ -24,7 +24,7 @@ final class Buffer2
     }
 
     /**
-     * @return Fold<null, Request, self>        
+     * @return Fold<null, Request, self>
      */
     public function __invoke(Str $chunk): Fold
     {

@@ -340,6 +340,8 @@ class Parse2Test extends TestCase
         \r
         RAW;
         $streams = Streams::fromAmbientAuthority();
+        // first chunk ending in the middle of line between the headers and
+        // the body
         $chunks = IO::of($streams->watch()->waitForever(...))
             ->readable()
             ->wrap(
@@ -354,8 +356,6 @@ class Parse2Test extends TestCase
                     ),
             )
             ->chunks(255);
-            // first chunk ending in the middle of line between the headers and
-            // the body
 
         $request = (new Parse2($streams, new Clock))($chunks)->match(
             static fn($request) => $request,

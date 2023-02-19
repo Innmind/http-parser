@@ -8,6 +8,14 @@ Set of classes to parse any sequence of strings into [`innmind/http`](https://pa
 
 This is useful if you want to parse requests saved in files or build an http server.
 
+Features supported:
+- [x] Decoding requests
+- [ ] Reading streamed requests with `Transfer-Encoding: chunked`
+- [x] Extracting `Cookie`s
+- [x] Extracting form data
+- [x] Extracting query data
+- [ ] Reading multipart bodies
+
 ## Installation
 
 ```sh

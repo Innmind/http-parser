@@ -10,6 +10,7 @@ use Innmind\Http\{
     Factory\Header\TryFactory,
     Factory\Header\Factories,
 };
+use Innmind\Stream\Capabilities;
 use Innmind\TimeContinuum\Clock;
 use Innmind\Url\Url;
 use Innmind\Immutable\{
@@ -21,13 +22,16 @@ use Innmind\Immutable\{
 
 final class FirstLine implements State
 {
+    private Capabilities $capabilities;
     private TryFactory $factory;
     private Str $buffer;
 
     private function __construct(
+        Capabilities $capabilities,
         TryFactory $factory,
         Str $buffer,
     ) {
+        $this->capabilities = $capabilities;
         $this->factory = $factory;
         $this->buffer = $buffer;
     }
@@ -38,14 +42,21 @@ final class FirstLine implements State
 
         /** @var Fold<null, Request, State> */
         return match ($buffer->contains("\n")) {
-            false => Fold::with(new self($this->factory, $buffer)),
+            false => Fold::with(new self(
+                $this->capabilities,
+                $this->factory,
+                $buffer,
+            )),
             true => $this->parse($buffer),
         };
     }
 
-    public static function new(Clock $clock): self
-    {
+    public static function new(
+        Capabilities $capabilities,
+        Clock $clock,
+    ): self {
         return new self(
+            $capabilities,
             new TryFactory(Factories::default($clock)),
             Str::of('', 'ASCII'),
         );
@@ -62,6 +73,7 @@ final class FirstLine implements State
                 fn($firstLine, $rest) => $this
                     ->parseHeader($firstLine->rightTrim("\n"))
                     ->map(fn($request) => Headers::new(
+                        $this->capabilities,
                         $this->factory,
                         $request,
                     ))

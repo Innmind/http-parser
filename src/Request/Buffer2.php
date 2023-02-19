@@ -7,6 +7,7 @@ use Innmind\HttpParser\Request\Buffer2\{
     State,
     FirstLine,
 };
+use Innmind\Stream\Capabilities;
 use Innmind\TimeContinuum\Clock;
 use Innmind\Http\Message\Request;
 use Innmind\Immutable\{
@@ -33,8 +34,10 @@ final class Buffer2
         );
     }
 
-    public static function new(Clock $clock): self
-    {
-        return new self(FirstLine::new($clock));
+    public static function new(
+        Capabilities $capabilities,
+        Clock $clock,
+    ): self {
+        return new self(FirstLine::new($capabilities, $clock));
     }
 }

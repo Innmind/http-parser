@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Innmind\HttpParser\Request\Buffer2;
 
+use Innmind\Stream\Capabilities;
 use Innmind\Http\{
     Message\Request,
     Header,
@@ -12,19 +13,23 @@ use Innmind\Immutable\{
     Fold,
     Str,
     Maybe,
+    Sequence,
 };
 
 final class Headers implements State
 {
+    private Capabilities $capabilities;
     private TryFactory $factory;
     private Request $request;
     private Str $buffer;
 
     private function __construct(
+        Capabilities $capabilities,
         TryFactory $factory,
         Request $request,
         Str $buffer,
     ) {
+        $this->capabilities = $capabilities;
         $this->factory = $factory;
         $this->request = $request;
         $this->buffer = $buffer;
@@ -48,6 +53,7 @@ final class Headers implements State
 
         /** @var Fold<null, Request, State> */
         return Fold::with(new self(
+            $this->capabilities,
             $this->factory,
             $this->request,
             $buffer,
@@ -55,10 +61,16 @@ final class Headers implements State
     }
 
     public static function new(
+        Capabilities $capabilities,
         TryFactory $factory,
         Request $request,
     ): self {
-        return new self($factory, $request, Str::of('', 'ASCII'));
+        return new self(
+            $capabilities,
+            $factory,
+            $request,
+            Str::of('', 'ASCII'),
+        );
     }
 
     /**
@@ -69,33 +81,10 @@ final class Headers implements State
         return $buffer
             ->split("\n")
             ->match(
-                fn($line, $rest) => $this
-                    ->parseHeader($line->rightTrim("\n"))
-                    ->map(fn($header) => $this->augment($header))
-                    ->map(fn($request) => self::new(
-                        $this->factory,
-                        $request,
-                    ))
-                    ->map(static function($state) use ($rest) {
-                        $buffer = Str::of("\n")->join($rest->map(
-                            static fn($line) => $line->toString(),
-                        ));
-
-                        // do not call the state with an empty string otherwise
-                        // it will believe it is the empty line indicating the
-                        // end of headers
-                        // // this case happen when the buffer passed to ->parse()
-                        // ends with the new line character
-                        /** @var Fold<null, Request, State> */
-                        return match ($buffer->empty()) {
-                            true => Fold::with($state),
-                            false => $state($buffer),
-                        };
-                    })
-                    ->match(
-                        static fn($fold) => $fold,
-                        static fn() => Fold::fail(null),
-                    ),
+                fn($line, $rest) => match ($line->rightTrim("\r")->empty()) {
+                    true => $this->parseBody($rest),
+                    false => $this->parseLine($line, $rest),
+                },
                 static fn() => Fold::fail(null),
             );
     }
@@ -120,5 +109,61 @@ final class Headers implements State
             $this->request->protocolVersion(),
             $this->request->headers()($header),
         );
+    }
+
+    /**
+     * @param Sequence<Str> $rest
+     *
+     * @return Fold<null, Request, State>
+     */
+    private function parseLine(Str $line, Sequence $rest): Fold
+    {
+        return $this
+            ->parseHeader($line->rightTrim("\n"))
+            ->map(fn($header) => $this->augment($header))
+            ->map(fn($request) => self::new(
+                $this->capabilities,
+                $this->factory,
+                $request,
+            ))
+            ->map(static function($state) use ($rest) {
+                $buffer = Str::of("\n")->join($rest->map(
+                    static fn($line) => $line->toString(),
+                ));
+
+                // do not call the state with an empty string otherwise
+                // it will believe it is the empty line indicating the
+                // end of headers
+                // // this case happen when the buffer passed to ->parse()
+                // ends with the new line character
+                /** @var Fold<null, Request, State> */
+                return match ($buffer->empty()) {
+                    true => Fold::with($state),
+                    false => $state($buffer),
+                };
+            })
+            ->match(
+                static fn($fold) => $fold,
+                static fn() => Fold::fail(null),
+            );
+    }
+
+    /**
+     * @param Sequence<Str> $rest
+     *
+     * @return Fold<null, Request, State>
+     */
+    private function parseBody(Sequence $rest): Fold
+    {
+        $buffer = Str::of("\n")->join($rest->map(
+            static fn($line) => $line->toString(),
+        ));
+        $body = Body::new($this->capabilities, $this->request);
+
+        /** @var Fold<null, Request, State> */
+        return match ($buffer->empty()) {
+            true => Fold::with($body),
+            false => $body($buffer),
+        };
     }
 }

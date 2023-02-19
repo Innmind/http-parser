@@ -25,6 +25,7 @@ use Innmind\HttpParser\{
     ServerRequest\DecodeForm,
 };
 use Innmind\TimeContinuum\Earth\Clock;
+use Innmind\IO\IO;
 use Innmind\Stream\Streams;
 use Innmind\Http\Message\ServerRequest;
 use Innmind\Immutable\Str;
@@ -41,13 +42,33 @@ Cookie: PHPSESSID=298zf09hf012fh2; csrftoken=u32t4o3tb3gg43; _gat=1
 some[key]=value&foo=bar
 
 RAW;
-$parse = new Parse(new Clock, Streams::fromAmbientAuthority());
-// chunk size doesn't matter and doesn't have to be the same for each chunk
-$request = $parse(Str::of($raw)->chunk(10))
-    ->map(new Transform)
-    ->map(new DecodeCookie)
-    ->map(new DecodeQuery)
-    ->map(new DecodeForm)
+$streams = Streams::fromAmbientAuthority();
+$io = IO::of(static fn($timeout) => match ($timeout) {
+    null => $streams->watch()->waitForever(),
+    default => $streams->watch()->timeoutAfter($timeout),
+});
+$parse = Parse::of($streams, new Clock);
+
+$stream = $streams
+    ->temporary()
+    ->new()
+    ->write(Str::of($raw))
+    ->flatMap(static fn($stream) => $stream->rewind())
+    ->match(
+        static fn($stream) => $stream,
+        static fn() => throw new \RuntimeException('Stream not writable'),
+    );
+$chunks = $io
+    ->readable()
+    ->wrap($stream)
+    ->watch()
+    ->chunks(10); // chunk size doesn't matter and doesn't have to be the same for each chunk
+
+$request = $parse($chunks)
+    ->map(Transform::of())
+    ->map(DecodeCookie::of())
+    ->map(DecodeQuery::of())
+    ->map(DecodeForm::of())
     ->match(
         static fn($request) => $request,
         static fn() => throw new \RuntimeException,

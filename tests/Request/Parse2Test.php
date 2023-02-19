@@ -224,7 +224,7 @@ class Parse2Test extends TestCase
                     ),
                 );
                 $this->assertSame(
-                    "some[key]=value&foo=bar\n\n",
+                    'some[key]=value&foo=bar',
                     $request->body()->toString(),
                 );
             });

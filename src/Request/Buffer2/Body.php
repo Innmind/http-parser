@@ -27,7 +27,7 @@ final class Body implements State
     private Maybe $expectedLength;
     /** @var 0|positive-int */
     private int $accumulated;
-    private Str $tail;
+    private Str $buffer;
 
     /**
      * @param Maybe<0|positive-int> $expectedLength
@@ -38,19 +38,18 @@ final class Body implements State
         Bidirectional $body,
         Maybe $expectedLength,
         int $accumulated,
-        Str $tail,
+        Str $buffer,
     ) {
         $this->request = $request;
         $this->body = $body;
         $this->expectedLength = $expectedLength;
         $this->accumulated = $accumulated;
-        $this->tail = $tail;
+        $this->buffer = $buffer;
     }
 
     public function __invoke(Str $chunk): Fold
     {
-        $chunk = $chunk->toEncoding('ASCII');
-        $tail = $this->tail($chunk);
+        $chunk = $this->buffer->append($chunk->toString());
         $length = $this->expectedLength->match(
             static fn($length) => $length,
             static fn() => null,
@@ -60,15 +59,8 @@ final class Body implements State
             return $this->accumulateUpTo($chunk, $length);
         }
 
-        if (
-            $tail->endsWith("\n\n") ||
-            $tail->endsWith("\r\n\r\n")
-        ) {
-            // the body end marker is written to the body exposed in the returned
-            // request because depending on the length of the chunks we received
-            // part of this marker may already have been written to the body
-            // so to have a consistent behaviour the marker is always exposed
-            return $this->endWith($chunk);
+        if ($chunk->contains("\n") || $chunk->contains("\r")) {
+            return $this->buffer($chunk);
         }
 
         return $this->accumulate($chunk);
@@ -106,9 +98,36 @@ final class Body implements State
                 $body,
                 $this->expectedLength,
                 $this->accumulated + $toWrite->length(),
-                $this->tail($toWrite),
+                Str::of('', 'ASCII'),
             ))
             ->flatMap(static fn($self) => $self->checkLength($length));
+    }
+
+    /**
+     * @return Fold<null, Request, State>
+     */
+    private function buffer(Str $chunk): Fold
+    {
+        if ($chunk->endsWith("\n") || $chunk->endsWith("\r")) {
+            if ($chunk->endsWith("\n\n")) {
+                return $this->endWith($chunk->dropEnd(2));
+            }
+
+            if ($chunk->endsWith("\r\n\r\n")) {
+                return $this->endWith($chunk->dropEnd(4));
+            }
+
+            // wait for extra chunks to see if we're reaching the end of the body
+            return Fold::with(new self(
+                $this->request,
+                $this->body,
+                $this->expectedLength,
+                $this->accumulated,
+                $chunk,
+            ));
+        }
+
+        return $this->accumulate($chunk);
     }
 
     /**
@@ -164,7 +183,7 @@ final class Body implements State
                 $body,
                 $this->expectedLength,
                 $this->accumulated + $chunk->length(),
-                $this->tail($chunk),
+                Str::of('', 'ASCII'),
             ));
     }
 
@@ -182,10 +201,5 @@ final class Body implements State
                 static fn($body) => Fold::with($body),
                 static fn() => Fold::fail(null), // failed to write to body or not bidirectional
             );
-    }
-
-    private function tail(Str $chunk): Str
-    {
-        return $this->tail->append($chunk->toString())->takeEnd(4);
     }
 }

@@ -144,8 +144,8 @@ final class Headers implements State
                 // do not call the state with an empty string otherwise
                 // it will believe it is the empty line indicating the
                 // end of headers
-                // // this case happen when the buffer passed to ->parse()
-                // ends with the new line character
+                // this case happen when the buffer passed to ->parse() ends
+                // with the new line character
                 /** @var Fold<null, Request, State> */
                 return match ($buffer->empty()) {
                     true => Fold::with($state),

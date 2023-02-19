@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Innmind\HttpParser\Request\Buffer2;
+namespace Innmind\HttpParser\Request\Buffer;
 
 use Innmind\Stream\{
     Capabilities,
@@ -118,6 +118,7 @@ final class Body implements State
             }
 
             // wait for extra chunks to see if we're reaching the end of the body
+            /** @var Fold<null, Request, State> */
             return Fold::with(new self(
                 $this->request,
                 $this->body,

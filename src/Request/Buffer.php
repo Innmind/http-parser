@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Innmind\HttpParser\Request;
 
-use Innmind\HttpParser\Request\Buffer2\{
+use Innmind\HttpParser\Request\Buffer\{
     State,
     FirstLine,
 };
@@ -15,7 +15,7 @@ use Innmind\Immutable\{
     Str,
 };
 
-final class Buffer2
+final class Buffer
 {
     private State $state;
 

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Innmind\HttpParser\Request\Buffer2;
+namespace Innmind\HttpParser\Request\Buffer;
 
 use Innmind\Stream\Capabilities;
 use Innmind\Http\{

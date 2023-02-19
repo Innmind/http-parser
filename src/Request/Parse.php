@@ -12,7 +12,7 @@ use Innmind\Immutable\{
     Fold,
 };
 
-final class Parse2
+final class Parse
 {
     private Capabilities $capabilities;
     private Clock $clock;
@@ -30,13 +30,13 @@ final class Parse2
      */
     public function __invoke(Chunks $chunks): Maybe
     {
-        /** @var Fold<null, Request, Buffer2> */
-        $fold = Fold::with(Buffer2::new($this->capabilities, $this->clock));
+        /** @var Fold<null, Request, Buffer> */
+        $fold = Fold::with(Buffer::new($this->capabilities, $this->clock));
 
         return $chunks
             ->fold(
                 $fold,
-                static fn(Buffer2 $buffer, $chunk) => $buffer($chunk),
+                static fn(Buffer $buffer, $chunk) => $buffer($chunk),
             )
             ->flatMap(static fn($result) => $result->maybe());
     }

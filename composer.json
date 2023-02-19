@@ -20,7 +20,7 @@
         "innmind/immutable": "~4.11",
         "innmind/time-continuum": "^3.2",
         "innmind/stream": "^4.0",
-        "innmind/io": "dev-reset"
+        "innmind/io": "~1.0"
     },
     "autoload": {
         "psr-4": {

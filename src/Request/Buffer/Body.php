@@ -78,7 +78,7 @@ final class Body implements State
                 ->find(ContentLength::class)
                 ->map(static fn($header) => $header->length()),
             0,
-            Str::of('', 'ASCII'),
+            Str::of('', Str\Encoding::ascii),
         );
     }
 
@@ -98,7 +98,7 @@ final class Body implements State
                 $body,
                 $this->expectedLength,
                 $this->accumulated + $toWrite->length(),
-                Str::of('', 'ASCII'),
+                Str::of('', Str\Encoding::ascii),
             ))
             ->flatMap(static fn($self) => $self->checkLength($length));
     }
@@ -184,7 +184,7 @@ final class Body implements State
                 $body,
                 $this->expectedLength,
                 $this->accumulated + $chunk->length(),
-                Str::of('', 'ASCII'),
+                Str::of('', Str\Encoding::ascii),
             ));
     }
 

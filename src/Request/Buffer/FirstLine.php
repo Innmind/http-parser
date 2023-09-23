@@ -58,7 +58,7 @@ final class FirstLine implements State
         return new self(
             $capabilities,
             new TryFactory(Factories::default($clock)),
-            Str::of('', 'ASCII'),
+            Str::of('', Str\Encoding::ascii),
         );
     }
 

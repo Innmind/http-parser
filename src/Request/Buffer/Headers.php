@@ -79,7 +79,7 @@ final class Headers implements State
             $capabilities,
             $factory,
             $request,
-            Str::of('', 'ASCII'),
+            Str::of('', Str\Encoding::ascii),
         );
     }
 

@@ -4,8 +4,14 @@
 
 ## Changed
 
+- Requires `innmind/immutable:~5.2`
+- Requires `innmind/http:~7.0`
 - `Innmind\HttpParser\Request\Parse::of()` now expects an instance of `Innmind\Http\Factory\Header\TryFactory`
 - `Innmind\HttpParser\Request\Parse::__invoke()` now expects an instance of `Innmind\IO\Readable\Stream`
+
+### Removed
+
+- Support for `innmind/io:~1.0`
 
 ## 1.1.0 - 2023-09-23
 

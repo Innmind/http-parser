@@ -13,7 +13,7 @@ use Innmind\IO\IO;
 use Innmind\Stream\Streams;
 use Innmind\Url\Path;
 use Innmind\Http\ServerRequest;
-use PHPUnit\Framework\TestCase;
+use Innmind\BlackBox\PHPUnit\Framework\TestCase;
 
 class DecodeCookieTest extends TestCase
 {

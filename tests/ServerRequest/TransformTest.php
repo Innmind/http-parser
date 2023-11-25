@@ -17,10 +17,10 @@ use Innmind\Url\{
     Authority\Host,
     Authority\Port,
 };
-use PHPUnit\Framework\TestCase;
 use Innmind\BlackBox\{
     PHPUnit\BlackBox,
     Set,
+    PHPUnit\Framework\TestCase,
 };
 
 class TransformTest extends TestCase

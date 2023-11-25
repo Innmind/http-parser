@@ -13,7 +13,7 @@ use Innmind\Http\ServerRequest;
 use Innmind\IO\IO;
 use Innmind\Stream\Streams;
 use Innmind\Url\Path;
-use PHPUnit\Framework\TestCase;
+use Innmind\BlackBox\PHPUnit\Framework\TestCase;
 
 class DecodeFormTest extends TestCase
 {

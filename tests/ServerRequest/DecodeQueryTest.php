@@ -13,10 +13,10 @@ use Innmind\Http\{
     ProtocolVersion,
 };
 use Innmind\Url\Url;
-use PHPUnit\Framework\TestCase;
 use Innmind\BlackBox\{
     PHPUnit\BlackBox,
     Set,
+    PHPUnit\Framework\TestCase,
 };
 
 class DecodeQueryTest extends TestCase

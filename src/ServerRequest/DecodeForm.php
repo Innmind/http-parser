@@ -4,8 +4,8 @@ declare(strict_types = 1);
 namespace Innmind\HttpParser\ServerRequest;
 
 use Innmind\Http\{
-    Message\ServerRequest,
-    Message\Form,
+    ServerRequest,
+    ServerRequest\Form,
     Header\ContentType,
     Header\ContentTypeValue,
 };
@@ -44,12 +44,12 @@ final class DecodeForm
 
         \parse_str($request->body()->toString(), $post);
 
-        return new ServerRequest\ServerRequest(
+        return ServerRequest::of(
             $request->url(),
             $request->method(),
             $request->protocolVersion(),
             $request->headers(),
-            Content\None::of(),
+            Content::none(),
             $request->environment(),
             $request->cookies(),
             $request->query(),

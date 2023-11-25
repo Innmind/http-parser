@@ -5,9 +5,9 @@ namespace Tests\Innmind\HttpParser\ServerRequest;
 
 use Innmind\HttpParser\ServerRequest\Transform;
 use Innmind\Http\{
-    Message\Request\Request,
-    Message\ServerRequest,
-    Message\Method,
+    Request,
+    ServerRequest,
+    Method,
     ProtocolVersion,
     Headers,
     Header,
@@ -35,7 +35,7 @@ class TransformTest extends TestCase
                 Set\Elements::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
-                $request = new Request(
+                $request = Request::of(
                     Url::of('/foo'),
                     $method,
                     $protocol,
@@ -61,7 +61,7 @@ class TransformTest extends TestCase
                 Set\Elements::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
-                $request = new Request(
+                $request = Request::of(
                     Url::of('//example.com:443/foo'), // without the first // it interprets the host as the scheme
                     $method,
                     $protocol,
@@ -87,7 +87,7 @@ class TransformTest extends TestCase
                 Set\Elements::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
-                $request = new Request(
+                $request = Request::of(
                     Url::of('/foo'),
                     $method,
                     $protocol,
@@ -118,7 +118,7 @@ class TransformTest extends TestCase
                 Set\Strings::any(),
             )
             ->then(function($method, $protocol, $scheme, $token) {
-                $request = new Request(
+                $request = Request::of(
                     Url::of('/foo'),
                     $method,
                     $protocol,
@@ -144,7 +144,7 @@ class TransformTest extends TestCase
                 Set\Elements::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
-                $request = new Request(
+                $request = Request::of(
                     Url::of('//some:pwd@/foo'), // without the first // it interprets the host as the scheme
                     $method,
                     $protocol,

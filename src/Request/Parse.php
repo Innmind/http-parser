@@ -5,7 +5,7 @@ namespace Innmind\HttpParser\Request;
 
 use Innmind\TimeContinuum\Clock;
 use Innmind\Stream\Capabilities;
-use Innmind\Http\Message\Request;
+use Innmind\Http\Request;
 use Innmind\IO\Readable\Chunks;
 use Innmind\Immutable\{
     Maybe,

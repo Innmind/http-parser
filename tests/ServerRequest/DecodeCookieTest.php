@@ -12,7 +12,7 @@ use Innmind\TimeContinuum\Earth\Clock;
 use Innmind\IO\IO;
 use Innmind\Stream\Streams;
 use Innmind\Url\Path;
-use Innmind\Http\Message\ServerRequest;
+use Innmind\Http\ServerRequest;
 use PHPUnit\Framework\TestCase;
 
 class DecodeCookieTest extends TestCase

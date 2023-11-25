@@ -9,7 +9,7 @@ use Innmind\HttpParser\{
     Request\Parse,
 };
 use Innmind\TimeContinuum\Earth\Clock;
-use Innmind\Http\Message\ServerRequest;
+use Innmind\Http\ServerRequest;
 use Innmind\IO\IO;
 use Innmind\Stream\Streams;
 use Innmind\Url\Path;

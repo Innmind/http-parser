@@ -4,8 +4,8 @@ declare(strict_types = 1);
 namespace Innmind\HttpParser\ServerRequest;
 
 use Innmind\Http\{
-    Message\ServerRequest,
-    Message\Cookies,
+    ServerRequest,
+    ServerRequest\Cookies,
     Header\Cookie,
     Header\Parameter,
 };
@@ -41,14 +41,14 @@ final class DecodeCookie
         Map $parameters,
         ServerRequest $request,
     ): ServerRequest {
-        return new ServerRequest\ServerRequest(
+        return ServerRequest::of(
             $request->url(),
             $request->method(),
             $request->protocolVersion(),
             $request->headers(),
             $request->body(),
             $request->environment(),
-            new Cookies($parameters->map(
+            Cookies::of($parameters->map(
                 static fn($_, $parameter) => $parameter->value(),
             )),
             $request->query(),

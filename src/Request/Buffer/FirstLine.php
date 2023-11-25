@@ -4,8 +4,8 @@ declare(strict_types = 1);
 namespace Innmind\HttpParser\Request\Buffer;
 
 use Innmind\Http\{
-    Message\Request,
-    Message\Method,
+    Request,
+    Method,
     ProtocolVersion,
     Factory\Header\TryFactory,
     Factory\Header\Factories,
@@ -102,7 +102,7 @@ final class FirstLine implements State
     }
 
     /**
-     * @return Maybe<Request\Request>
+     * @return Maybe<Request>
      */
     private function parseHeader(Str $header): Maybe
     {
@@ -126,7 +126,7 @@ final class FirstLine implements State
             ->keep(Instance::of(ProtocolVersion::class));
 
         return Maybe::all($method, $url, $protocol)->map(
-            static fn(Method $method, Url $url, ProtocolVersion $protocol) => new Request\Request(
+            static fn(Method $method, Url $url, ProtocolVersion $protocol) => Request::of(
                 $url,
                 $method,
                 $protocol,

@@ -9,7 +9,7 @@ use Innmind\HttpParser\Request\Buffer\{
 };
 use Innmind\Stream\Capabilities;
 use Innmind\TimeContinuum\Clock;
-use Innmind\Http\Message\Request;
+use Innmind\Http\Request;
 use Innmind\Immutable\{
     Fold,
     Str,

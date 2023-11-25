@@ -5,8 +5,8 @@ namespace Innmind\HttpParser\Request\Buffer;
 
 use Innmind\Stream\Capabilities;
 use Innmind\Http\{
-    Message\Request,
-    Message\Method,
+    Request,
+    Method,
     Header,
     Header\ContentLength,
     Factory\Header\TryFactory,
@@ -113,7 +113,7 @@ final class Headers implements State
 
     private function augment(Header $header): Request
     {
-        return new Request\Request(
+        return Request::of(
             $this->request->url(),
             $this->request->method(),
             $this->request->protocolVersion(),

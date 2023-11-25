@@ -6,8 +6,8 @@ namespace Tests\Innmind\HttpParser\Request;
 use Innmind\HttpParser\Request\Parse;
 use Innmind\TimeContinuum\Earth\Clock;
 use Innmind\Http\{
-    Message\Request,
-    Message\Method,
+    Request,
+    Method,
     ProtocolVersion,
 };
 use Innmind\IO\IO;

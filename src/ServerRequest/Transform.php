@@ -4,8 +4,8 @@ declare(strict_types = 1);
 namespace Innmind\HttpParser\ServerRequest;
 
 use Innmind\Http\{
-    Message\Request,
-    Message\ServerRequest,
+    Request,
+    ServerRequest,
     Header,
 };
 use Innmind\Url\{
@@ -69,7 +69,7 @@ final class Transform
 
         $query = null;
 
-        return new ServerRequest\ServerRequest(
+        return ServerRequest::of(
             $url,
             $request->method(),
             $request->protocolVersion(),

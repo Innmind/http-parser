@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Innmind\HttpParser\Request\Buffer;
 
-use Innmind\Http\Message\Request;
+use Innmind\Http\Request;
 use Innmind\Immutable\{
     Fold,
     Str,

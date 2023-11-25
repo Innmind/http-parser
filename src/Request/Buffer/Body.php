@@ -8,7 +8,7 @@ use Innmind\Stream\{
     Bidirectional,
 };
 use Innmind\Http\{
-    Message\Request,
+    Request,
     Header\ContentLength,
 };
 use Innmind\Filesystem\File\Content;
@@ -139,12 +139,12 @@ final class Body implements State
         /** @var Fold<null, Request, State> */
         return $this
             ->body($chunk)
-            ->map(fn($body) => new Request\Request(
+            ->map(fn($body) => Request::of(
                 $this->request->url(),
                 $this->request->method(),
                 $this->request->protocolVersion(),
                 $this->request->headers(),
-                Content\OfStream::of($body),
+                Content::io($body),
             ))
             ->flatMap(static fn($request) => Fold::result($request));
     }
@@ -158,12 +158,12 @@ final class Body implements State
     {
         if ($this->accumulated === $length) {
             /** @var Fold<null, Request, State> */
-            return Fold::result(new Request\Request(
+            return Fold::result(Request::of(
                 $this->request->url(),
                 $this->request->method(),
                 $this->request->protocolVersion(),
                 $this->request->headers(),
-                Content\OfStream::of($this->body),
+                Content::io($this->body),
             ));
         }
 

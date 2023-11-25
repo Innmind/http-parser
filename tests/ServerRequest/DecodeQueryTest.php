@@ -8,8 +8,8 @@ use Innmind\HttpParser\ServerRequest\{
     Transform,
 };
 use Innmind\Http\{
-    Message\Request\Request,
-    Message\Method,
+    Request,
+    Method,
     ProtocolVersion,
 };
 use Innmind\Url\Url;
@@ -31,7 +31,7 @@ class DecodeQueryTest extends TestCase
                 Set\Elements::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
-                $request = new Request(
+                $request = Request::of(
                     Url::of('/?some[key]=value&foo=bar'), // without the first // it interprets the host as the scheme
                     $method,
                     $protocol,

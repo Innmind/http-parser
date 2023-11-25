@@ -3,48 +3,97 @@ declare(strict_types = 1);
 
 namespace Innmind\HttpParser\Request;
 
+use Innmind\HttpParser\Request\Frame\{
+    FirstLine,
+    Headers,
+    Body,
+};
+use Innmind\Http\{
+    Request,
+    Method,
+    ProtocolVersion,
+    Headers as HttpHeaders,
+    Factory\Header\TryFactory,
+    Factory\Header\Factories,
+};
 use Innmind\TimeContinuum\Clock;
-use Innmind\Stream\Capabilities;
-use Innmind\Http\Request;
-use Innmind\IO\Readable\Chunks;
+use Innmind\Filesystem\File\Content;
+use Innmind\Url\Url;
+use Innmind\IO\Readable\{
+    Stream,
+    Frame,
+};
 use Innmind\Immutable\{
     Maybe,
-    Fold,
+    Str,
 };
 
 final class Parse
 {
-    private Capabilities $capabilities;
-    private Clock $clock;
+    private TryFactory $factory;
 
-    private function __construct(
-        Capabilities $capabilities,
-        Clock $clock,
-    ) {
-        $this->capabilities = $capabilities;
-        $this->clock = $clock;
+    private function __construct(TryFactory $factory)
+    {
+        $this->factory = $factory;
     }
 
     /**
      * @return Maybe<Request>
      */
-    public function __invoke(Chunks $chunks): Maybe
+    public function __invoke(Stream $stream): Maybe
     {
-        /** @var Fold<null, Request, Buffer> */
-        $fold = Fold::with(Buffer::new($this->capabilities, $this->clock));
+        $frame = Frame\Composite::of(
+            self::build(...),
+            FirstLine::new(),
+            Headers::of($this->factory)->flatMap(
+                static fn($headers) => Body::of($headers)->map(
+                    static fn($content) => [$headers, $content],
+                ),
+            ),
+        );
 
-        return $chunks
-            ->fold(
-                $fold,
-                static fn(Buffer $buffer, $chunk) => $buffer($chunk),
-            )
-            ->flatMap(static fn($result) => $result->maybe());
+        return $stream
+            ->toEncoding(Str\Encoding::ascii)
+            ->frames($frame)
+            ->one()
+            ->flatMap(static fn($request) => $request);
     }
 
-    public static function of(
-        Capabilities $capabilities,
-        Clock $clock,
-    ): self {
-        return new self($capabilities, $clock);
+    public static function of(TryFactory $factory): self
+    {
+        return new self($factory);
+    }
+
+    public static function default(Clock $clock): self
+    {
+        return new self(new TryFactory(Factories::default($clock)));
+    }
+
+    /**
+     * @param Maybe<array{Method, Url, ProtocolVersion}> $firstLine
+     * @param array{Maybe<HttpHeaders>, Content} $headersAndBody
+     *
+     * @return Maybe<Request>
+     */
+    private static function build(
+        Maybe $firstLine,
+        array $headersAndBody,
+    ): Maybe {
+        [$headers, $body] = $headersAndBody;
+
+        return Maybe::all($firstLine, $headers)->map(
+            static function(...$args) use ($body) {
+                /** @var array{array{Method, Url, ProtocolVersion}, HttpHeaders} $args */
+                [[$method, $url, $protocol], $headers] = $args;
+
+                return Request::of(
+                    $url,
+                    $method,
+                    $protocol,
+                    $headers,
+                    $body,
+                );
+            },
+        );
     }
 }

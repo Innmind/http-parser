@@ -17,15 +17,21 @@ use PHPUnit\Framework\TestCase;
 
 class DecodeCookieTest extends TestCase
 {
+    private Parse $parse;
+
+    public function setUp(): void
+    {
+        $this->parse = Parse::default(new Clock);
+    }
+
     public function testDecode()
     {
         $streams = Streams::fromAmbientAuthority();
-        $chunks = IO::of($streams->watch()->waitForever(...))
+        $io = IO::of($streams->watch()->waitForever(...))
             ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/cookie.txt')))
-            ->chunks(10);
+            ->wrap($streams->readable()->open(Path::of('fixtures/cookie.txt')));
 
-        $request = Parse::of($streams, new Clock)($chunks)
+        $request = ($this->parse)($io)
             ->map(Transform::of())
             ->map(DecodeCookie::of())
             ->match(
@@ -61,12 +67,11 @@ class DecodeCookieTest extends TestCase
     public function testDecodeWhenNoCookieHeader()
     {
         $streams = Streams::fromAmbientAuthority();
-        $chunks = IO::of($streams->watch()->waitForever(...))
+        $io = IO::of($streams->watch()->waitForever(...))
             ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')))
-            ->chunks(10);
+            ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')));
 
-        $request = Parse::of($streams, new Clock)($chunks)
+        $request = ($this->parse)($io)
             ->map(Transform::of())
             ->map(DecodeCookie::of())
             ->match(

@@ -9,23 +9,29 @@ use Innmind\HttpParser\{
     Request\Parse,
 };
 use Innmind\TimeContinuum\Earth\Clock;
-use Innmind\Http\Message\ServerRequest;
+use Innmind\Http\ServerRequest;
 use Innmind\IO\IO;
 use Innmind\Stream\Streams;
 use Innmind\Url\Path;
-use PHPUnit\Framework\TestCase;
+use Innmind\BlackBox\PHPUnit\Framework\TestCase;
 
 class DecodeFormTest extends TestCase
 {
+    private Parse $parse;
+
+    public function setUp(): void
+    {
+        $this->parse = Parse::default(new Clock);
+    }
+
     public function testDecode()
     {
         $streams = Streams::fromAmbientAuthority();
-        $chunks = IO::of($streams->watch()->waitForever(...))
+        $io = IO::of($streams->watch()->waitForever(...))
             ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/post.txt')))
-            ->chunks(10);
+            ->wrap($streams->readable()->open(Path::of('fixtures/post.txt')));
 
-        $request = Parse::of($streams, new Clock)($chunks)
+        $request = ($this->parse)($io)
             ->map(Transform::of())
             ->map(DecodeForm::of())
             ->match(
@@ -61,12 +67,11 @@ class DecodeFormTest extends TestCase
     public function testDecodeEmptyBody()
     {
         $streams = Streams::fromAmbientAuthority();
-        $chunks = IO::of($streams->watch()->waitForever(...))
+        $io = IO::of($streams->watch()->waitForever(...))
             ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')))
-            ->chunks(10);
+            ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')));
 
-        $request = Parse::of($streams, new Clock)($chunks)
+        $request = ($this->parse)($io)
             ->map(Transform::of())
             ->map(DecodeForm::of())
             ->match(

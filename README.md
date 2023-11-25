@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/innmind/http-parser/branch/develop/graph/badge.svg)](https://codecov.io/gh/innmind/http-parser)
 [![Type Coverage](https://shepherd.dev/github/innmind/http-parser/coverage.svg)](https://shepherd.dev/github/innmind/http-parser)
 
-Set of classes to parse any sequence of strings into [`innmind/http`](https://packagist.org/packages/innmind/http) objects.
+Set of classes to parse any stream into [`innmind/http`](https://packagist.org/packages/innmind/http) objects.
 
 This is useful if you want to parse requests saved in files or build an http server.
 
@@ -55,7 +55,7 @@ $io = IO::of(static fn($timeout) => match ($timeout) {
     null => $streams->watch()->waitForever(),
     default => $streams->watch()->timeoutAfter($timeout),
 });
-$parse = Parse::of($streams, new Clock);
+$parse = Parse::default(new Clock);
 
 $stream = $streams
     ->temporary()
@@ -66,13 +66,12 @@ $stream = $streams
         static fn($stream) => $stream,
         static fn() => throw new \RuntimeException('Stream not writable'),
     );
-$chunks = $io
+$stream = $io
     ->readable()
     ->wrap($stream)
-    ->watch()
-    ->chunks(10); // chunk size doesn't matter and doesn't have to be the same for each chunk
+    ->watch();
 
-$request = $parse($chunks)
+$request = $parse($stream)
     ->map(Transform::of())
     ->map(DecodeCookie::of())
     ->map(DecodeQuery::of())

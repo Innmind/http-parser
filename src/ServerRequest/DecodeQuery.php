@@ -3,10 +3,7 @@ declare(strict_types = 1);
 
 namespace Innmind\HttpParser\ServerRequest;
 
-use Innmind\Http\{
-    Message\ServerRequest,
-    Message,
-};
+use Innmind\Http\ServerRequest;
 use Innmind\Url\Query;
 
 final class DecodeQuery
@@ -23,7 +20,7 @@ final class DecodeQuery
 
         \parse_str($request->url()->query()->toString(), $query);
 
-        return new ServerRequest\ServerRequest(
+        return ServerRequest::of(
             $request->url(),
             $request->method(),
             $request->protocolVersion(),
@@ -31,7 +28,7 @@ final class DecodeQuery
             $request->body(),
             $request->environment(),
             $request->cookies(),
-            Message\Query::of($query),
+            ServerRequest\Query::of($query),
             $request->form(),
             $request->files(),
         );

@@ -19,9 +19,10 @@ use Innmind\Http\{
 use Innmind\TimeContinuum\Clock;
 use Innmind\Filesystem\File\Content;
 use Innmind\Url\Url;
-use Innmind\IO\Readable\{
-    Stream,
-    Frame,
+use Innmind\IO\{
+    Readable\Stream,
+    Readable\Frame,
+    Sockets\Client,
 };
 use Innmind\Immutable\{
     Maybe,
@@ -40,7 +41,7 @@ final class Parse
     /**
      * @return Maybe<Request>
      */
-    public function __invoke(Stream $stream): Maybe
+    public function __invoke(Stream|Client $stream): Maybe
     {
         $frame = Frame\Composite::of(
             self::build(...),

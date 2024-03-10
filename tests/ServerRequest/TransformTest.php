@@ -6,7 +6,6 @@ namespace Tests\Innmind\HttpParser\ServerRequest;
 use Innmind\HttpParser\ServerRequest\Transform;
 use Innmind\Http\{
     Request,
-    ServerRequest,
     Method,
     ProtocolVersion,
     Headers,

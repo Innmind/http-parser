@@ -47,7 +47,10 @@ final class Transform
             $authority = $headers
                 ->find(Header\Authorization::class)
                 ->filter(static fn($authorization) => $authorization->scheme() === 'Basic')
-                ->map(static fn($authorization) => \base64_decode($authorization->parameter(), true) ?: '')
+                ->map(static fn($authorization) => match ($decoded = \base64_decode($authorization->parameter(), true)) {
+                    false => '',
+                    default => $decoded,
+                })
                 ->map(Str::of(...))
                 ->map(static fn($basic) => $basic->split(':'))
                 ->filter(static fn($basic) => $basic->size() === 2)

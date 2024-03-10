@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Allow to parse data coming from a `Innmind\IO\Sockets\Client`
+
+### Changed
+
+- Requires `innmind/io:~2.7`
+
 ## 2.0.0 - 2023-11-25
 
 ## Changed

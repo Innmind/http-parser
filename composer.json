@@ -16,11 +16,7 @@
     },
     "require": {
         "php": "~8.2",
-        "innmind/http": "~7.0",
-        "innmind/immutable": "~5.2",
-        "innmind/time-continuum": "~3.2",
-        "innmind/stream": "~4.0",
-        "innmind/io": "~2.7"
+        "innmind/foundation": "~1.4"
     },
     "autoload": {
         "psr-4": {

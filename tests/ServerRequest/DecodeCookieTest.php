@@ -8,10 +8,8 @@ use Innmind\HttpParser\{
     ServerRequest\Transform,
     Request\Parse,
 };
-use Innmind\TimeContinuum\Earth\Clock;
+use Innmind\TimeContinuum\Clock;
 use Innmind\IO\IO;
-use Innmind\Stream\Streams;
-use Innmind\Url\Path;
 use Innmind\Http\ServerRequest;
 use Innmind\BlackBox\PHPUnit\Framework\TestCase;
 
@@ -21,15 +19,15 @@ class DecodeCookieTest extends TestCase
 
     public function setUp(): void
     {
-        $this->parse = Parse::default(new Clock);
+        $this->parse = Parse::default(Clock::live());
     }
 
     public function testDecode()
     {
-        $streams = Streams::fromAmbientAuthority();
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/cookie.txt')));
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire(\fopen('fixtures/cookie.txt', 'r'))
+            ->read();
 
         $request = ($this->parse)($io)
             ->map(Transform::of())
@@ -66,10 +64,10 @@ class DecodeCookieTest extends TestCase
 
     public function testDecodeWhenNoCookieHeader()
     {
-        $streams = Streams::fromAmbientAuthority();
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')));
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire(\fopen('fixtures/post.txt', 'r'))
+            ->read();
 
         $request = ($this->parse)($io)
             ->map(Transform::of())

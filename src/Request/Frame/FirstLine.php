@@ -8,7 +8,7 @@ use Innmind\Http\{
     ProtocolVersion,
 };
 use Innmind\Url\Url;
-use Innmind\IO\Readable\Frame;
+use Innmind\IO\Frame;
 use Innmind\Immutable\{
     Str,
     Maybe,
@@ -22,7 +22,7 @@ final class FirstLine
      */
     public static function new(): Frame
     {
-        return Frame\Line::new()
+        return Frame::line()
             ->map(static fn($line) => $line->trim())
             ->map(static fn(Str $line) => $line->capture('~^(?<method>[A-Z]+) (?<url>.+) HTTP/(?<protocol>1(\.[01])?)$~'))
             ->map(static function($parts) {

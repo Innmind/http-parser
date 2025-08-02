@@ -3,98 +3,65 @@ declare(strict_types = 1);
 
 namespace Innmind\HttpParser\Request\Frame\Body;
 
-use Innmind\IO\{
-    Readable\Frame,
-    Readable\Frame\Map,
-    Readable\Frame\Filter,
-    Readable\Frame\FlatMap,
-    Exception\FailedToLoadStream,
-};
+use Innmind\IO\Frame;
 use Innmind\Immutable\{
     Sequence,
-    Maybe,
     Str,
+    Monoid\Concat,
 };
 
 /**
  * @internal
- * @implements Frame<Sequence<Str>>
  */
-final class Unbounded implements Frame
+final class Unbounded
 {
-    private function __construct()
+    /**
+     * @return Frame<Sequence<Str>>
+     */
+    public static function new(): Frame
     {
-    }
-
-    #[\Override]
-    public function __invoke(
-        callable $read,
-        callable $readLine,
-    ): Maybe {
-        return Maybe::just(Sequence::lazy(function() use ($read) {
-            $buffer = Str::of('');
-
-            do {
-                $chunk = $read(8192)->match(
-                    static fn($chunk) => $chunk,
-                    static fn() => throw new FailedToLoadStream,
-                );
-
-                // use prepend to make sure to use the encoding of the chunk and
-                // not the default utf8 from the initial buffer
-                $tmpBuffer = $chunk
-                    ->prepend($buffer)
-                    ->takeEnd(4);
-                $endReached = $this->end($tmpBuffer);
-
-                if ($endReached) {
-                    $chunk = match ($chunk->endsWith("\n\n")) {
-                        true => $chunk->dropEnd(2),
-                        false => $chunk->dropEnd(4),
-                    };
-                }
-
-                yield $chunk;
-
-                $buffer = $tmpBuffer;
-            } while (!$endReached);
-        }));
-    }
-
-    public static function new(): self
-    {
-        return new self;
+        return Frame::sequence(
+            Frame::chunk(8192)->loose(),
+        )
+            ->map(
+                static fn($chunks) => $chunks
+                    ->map(static fn($chunk) => $chunk->unwrap()) // todo find a way to not throw
+                    ->flatMap(static fn($chunk) => match ($chunk->empty()) {
+                        true => Sequence::of($chunk),
+                        false => $chunk->chunk(),
+                    })
+                    ->windows(4)
+                    ->via(self::bound(...))
+                    ->aggregate(static fn(Str $a, Str $b) => match (true) {
+                        $a->length() < 8192 => Sequence::of($a->append($b)),
+                        default => Sequence::of($a, $b),
+                    }),
+            );
     }
 
     /**
-     * @psalm-mutation-free
+     * @param Sequence<Sequence<Str>> $chunks
+     *
+     * @return Sequence<Str>
      */
-    #[\Override]
-    public function filter(callable $predicate): Frame
+    private static function bound(Sequence $chunks): Sequence
     {
-        return Filter::of($this, $predicate);
-    }
+        $end = Str::of('');
 
-    /**
-     * @psalm-mutation-free
-     */
-    #[\Override]
-    public function map(callable $map): Frame
-    {
-        return Map::of($this, $map);
-    }
-
-    /**
-     * @psalm-mutation-free
-     */
-    #[\Override]
-    public function flatMap(callable $map): Frame
-    {
-        return FlatMap::of($this, $map);
-    }
-
-    private function end(Str $buffer): bool
-    {
-        return $buffer->empty() || $buffer->equals(Str::of("\r\n\r\n")) || $buffer->takeEnd(2)->equals(Str::of("\n\n"));
+        return $chunks
+            ->flatMap(static fn($chunk) => match (true) {
+                $chunk
+                    ->fold(new Concat)
+                    ->empty() => Sequence::of($end),
+                $chunk
+                    ->fold(new Concat)
+                    ->equals(Str::of("\r\n\r\n")) => Sequence::of($end),
+                $chunk
+                    ->drop(2)
+                    ->fold(new Concat)
+                    ->equals(Str::of("\n\n")) => $chunk->take(2)->add($end),
+                default => $chunk->take(1),
+            })
+            ->takeWhile(static fn($chunk) => $chunk !== $end);
     }
 }

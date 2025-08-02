@@ -32,10 +32,9 @@ use Innmind\HttpParser\{
     ServerRequest\DecodeQuery,
     ServerRequest\DecodeForm,
 };
-use Innmind\TimeContinuum\Earth\Clock;
+use Innmind\TimeContinuum\Clock;
 use Innmind\IO\IO;
-use Innmind\Stream\Streams;
-use Innmind\Http\Message\ServerRequest;
+use Innmind\Http\ServerRequest;
 use Innmind\Immutable\Str;
 
 // this data could come from anywhere
@@ -50,28 +49,17 @@ Cookie: PHPSESSID=298zf09hf012fh2; csrftoken=u32t4o3tb3gg43; _gat=1
 some[key]=value&foo=bar
 
 RAW;
-$streams = Streams::fromAmbientAuthority();
-$io = IO::of(static fn($timeout) => match ($timeout) {
-    null => $streams->watch()->waitForever(),
-    default => $streams->watch()->timeoutAfter($timeout),
-});
-$parse = Parse::default(new Clock);
+$tmp = \fopen('php://temp', 'w+');
+$io = IO::fromAmbientAuthority()
+    ->streams()
+    ->acquire($tmp);
+$io
+    ->write()
+    ->sink(Sequence::of(Str::of($raw)))
+    ->unwrap();
+\fseek($tmp, 0);
 
-$stream = $streams
-    ->temporary()
-    ->new()
-    ->write(Str::of($raw))
-    ->flatMap(static fn($stream) => $stream->rewind())
-    ->match(
-        static fn($stream) => $stream,
-        static fn() => throw new \RuntimeException('Stream not writable'),
-    );
-$stream = $io
-    ->readable()
-    ->wrap($stream)
-    ->watch();
-
-$request = $parse($stream)
+$request = $parse($io->read())
     ->map(Transform::of())
     ->map(DecodeCookie::of())
     ->map(DecodeQuery::of())

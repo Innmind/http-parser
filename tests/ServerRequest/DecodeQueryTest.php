@@ -27,8 +27,8 @@ class DecodeQueryTest extends TestCase
     {
         $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
                 $request = Request::of(

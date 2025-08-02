@@ -13,16 +13,15 @@ use Innmind\Http\{
     Method,
     ProtocolVersion,
     Headers as HttpHeaders,
-    Factory\Header\TryFactory,
-    Factory\Header\Factories,
+    Factory\Header\Factory,
 };
 use Innmind\TimeContinuum\Clock;
 use Innmind\Filesystem\File\Content;
 use Innmind\Url\Url;
 use Innmind\IO\{
-    Readable\Stream,
-    Readable\Frame,
-    Sockets\Client,
+    Streams\Stream\Read,
+    Sockets\Clients\Client,
+    Frame,
 };
 use Innmind\Immutable\{
     Maybe,
@@ -31,9 +30,9 @@ use Innmind\Immutable\{
 
 final class Parse
 {
-    private TryFactory $factory;
+    private Factory $factory;
 
-    private function __construct(TryFactory $factory)
+    private function __construct(Factory $factory)
     {
         $this->factory = $factory;
     }
@@ -41,9 +40,9 @@ final class Parse
     /**
      * @return Maybe<Request>
      */
-    public function __invoke(Stream|Client $stream): Maybe
+    public function __invoke(Read|Client $stream): Maybe
     {
-        $frame = Frame\Composite::of(
+        $frame = Frame::compose(
             self::build(...),
             FirstLine::new(),
             Headers::of($this->factory)->flatMap(
@@ -57,17 +56,18 @@ final class Parse
             ->toEncoding(Str\Encoding::ascii)
             ->frames($frame)
             ->one()
+            ->maybe()
             ->flatMap(static fn($request) => $request);
     }
 
-    public static function of(TryFactory $factory): self
+    public static function of(Factory $factory): self
     {
         return new self($factory);
     }
 
     public static function default(Clock $clock): self
     {
-        return new self(new TryFactory(Factories::default($clock)));
+        return new self(Factory::new($clock));
     }
 
     /**

@@ -4,18 +4,18 @@ declare(strict_types = 1);
 namespace Tests\Innmind\HttpParser\Request;
 
 use Innmind\HttpParser\Request\Parse;
-use Innmind\TimeContinuum\Earth\Clock;
+use Innmind\TimeContinuum\Clock;
 use Innmind\Http\{
     Request,
     Method,
     ProtocolVersion,
-    Factory\Header\TryFactory,
-    Factory\Header\Factories,
+    Factory\Header\Factory,
 };
 use Innmind\IO\IO;
-use Innmind\Url\Path;
-use Innmind\Stream\Streams;
-use Innmind\Immutable\Str;
+use Innmind\Immutable\{
+    Str,
+    Sequence,
+};
 use Innmind\BlackBox\PHPUnit\Framework\TestCase;
 
 class ParseTest extends TestCase
@@ -24,15 +24,15 @@ class ParseTest extends TestCase
 
     public function setUp(): void
     {
-        $this->parse = Parse::of(new TryFactory(Factories::default(new Clock)));
+        $this->parse = Parse::of(Factory::new(Clock::live()));
     }
 
     public function testParseGet()
     {
-        $streams = Streams::fromAmbientAuthority();
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/get.txt')));
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire(\fopen('fixtures/get.txt', 'r'))
+            ->read();
 
         $request = ($this->parse)($io)->match(
             static fn($request) => $request,
@@ -92,19 +92,16 @@ class ParseTest extends TestCase
             ->append("Accept-Encoding: gzip, deflate\r\n")
             ->append("Connection: keep-alive\r\n")
             ->append("\r\n");
-        $streams = Streams::fromAmbientAuthority();
-        $stream = $streams
-            ->temporary()
-            ->new()
-            ->write($content)
-            ->flatMap(static fn($stream) => $stream->rewind())
-            ->match(
-                static fn($stream) => $stream,
-                static fn() => null,
-            );
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap($stream);
+        $tmp = \fopen('php://temp', 'w+');
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire($tmp);
+        $io
+            ->write()
+            ->sink(Sequence::of($content))
+            ->unwrap();
+        \fseek($tmp, 0);
+        $io = $io->read();
 
         $request = ($this->parse)($io)->match(
             static fn($request) => $request,
@@ -125,19 +122,16 @@ class ParseTest extends TestCase
             ->append("Content-Length: 0\r\n")
             ->append("Connection: close\r\n")
             ->append("\r\n");
-        $streams = Streams::fromAmbientAuthority();
-        $stream = $streams
-            ->temporary()
-            ->new()
-            ->write($content)
-            ->flatMap(static fn($stream) => $stream->rewind())
-            ->match(
-                static fn($stream) => $stream,
-                static fn() => null,
-            );
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap($stream);
+        $tmp = \fopen('php://temp', 'w+');
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire($tmp);
+        $io
+            ->write()
+            ->sink(Sequence::of($content))
+            ->unwrap();
+        \fseek($tmp, 0);
+        $io = $io->read();
 
         $request = ($this->parse)($io)->match(
             static fn($request) => $request,
@@ -153,10 +147,10 @@ class ParseTest extends TestCase
 
     public function testParsePost()
     {
-        $streams = Streams::fromAmbientAuthority();
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/post.txt')));
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire(\fopen('fixtures/post.txt', 'r'))
+            ->read();
 
         $request = ($this->parse)($io)->match(
             static fn($request) => $request,
@@ -225,10 +219,10 @@ class ParseTest extends TestCase
 
     public function testParseUnboundedPost()
     {
-        $streams = Streams::fromAmbientAuthority();
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap($streams->readable()->open(Path::of('fixtures/unbounded-post.txt')));
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire(\fopen('fixtures/unbounded-post.txt', 'r'))
+            ->read();
 
         $request = ($this->parse)($io)->match(
             static fn($request) => $request,
@@ -300,20 +294,16 @@ class ParseTest extends TestCase
         \r
 
         RAW;
-        $streams = Streams::fromAmbientAuthority();
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap(
-                $streams
-                    ->temporary()
-                    ->new()
-                    ->write(Str::of($raw))
-                    ->flatMap(static fn($stream) => $stream->rewind())
-                    ->match(
-                        static fn($stream) => $stream,
-                        static fn() => null,
-                    ),
-            );
+        $tmp = \fopen('php://temp', 'w+');
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire($tmp);
+        $io
+            ->write()
+            ->sink(Sequence::of(Str::of($raw)))
+            ->unwrap();
+        \fseek($tmp, 0);
+        $io = $io->read();
 
         $request = ($this->parse)($io)->match(
             static fn($request) => $request,
@@ -343,20 +333,16 @@ class ParseTest extends TestCase
         \r
 
         RAW;
-        $streams = Streams::fromAmbientAuthority();
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap(
-                $streams
-                    ->temporary()
-                    ->new()
-                    ->write(Str::of($raw))
-                    ->flatMap(static fn($stream) => $stream->rewind())
-                    ->match(
-                        static fn($stream) => $stream,
-                        static fn() => null,
-                    ),
-            );
+        $tmp = \fopen('php://temp', 'w+');
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire($tmp);
+        $io
+            ->write()
+            ->sink(Sequence::of(Str::of($raw)))
+            ->unwrap();
+        \fseek($tmp, 0);
+        $io = $io->read();
 
         $request = ($this->parse)($io)->match(
             static fn($request) => $request,
@@ -390,22 +376,18 @@ class ParseTest extends TestCase
         \r
 
         RAW;
-        $streams = Streams::fromAmbientAuthority();
         // first chunk ending in the middle of line between the headers and
         // the body
-        $io = IO::of($streams->watch()->waitForever(...))
-            ->readable()
-            ->wrap(
-                $streams
-                    ->temporary()
-                    ->new()
-                    ->write(Str::of($raw))
-                    ->flatMap(static fn($stream) => $stream->rewind())
-                    ->match(
-                        static fn($stream) => $stream,
-                        static fn() => null,
-                    ),
-            );
+        $tmp = \fopen('php://temp', 'w+');
+        $io = IO::fromAmbientAuthority()
+            ->streams()
+            ->acquire($tmp);
+        $io
+            ->write()
+            ->sink(Sequence::of(Str::of($raw)))
+            ->unwrap();
+        \fseek($tmp, 0);
+        $io = $io->read();
 
         $request = ($this->parse)($io)->match(
             static fn($request) => $request,

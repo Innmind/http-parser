@@ -23,14 +23,14 @@ class DecodeQueryTest extends TestCase
 {
     use BlackBox;
 
-    public function testDecodeQueryFromUrl()
+    public function testDecodeQueryFromUrl(): BlackBox\Proof
     {
-        $this
+        return $this
             ->forAll(
                 Set::of(...Method::cases()),
                 Set::of(...ProtocolVersion::cases()),
             )
-            ->then(function($method, $protocol) {
+            ->prove(function($method, $protocol) {
                 $request = Request::of(
                     Url::of('/?some[key]=value&foo=bar'), // without the first // it interprets the host as the scheme
                     $method,

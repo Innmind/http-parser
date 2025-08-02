@@ -30,8 +30,8 @@ class TransformTest extends TestCase
     {
         $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
                 $request = Request::of(
@@ -56,8 +56,8 @@ class TransformTest extends TestCase
     {
         $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
                 $request = Request::of(
@@ -82,8 +82,8 @@ class TransformTest extends TestCase
     {
         $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
                 $request = Request::of(
@@ -111,10 +111,12 @@ class TransformTest extends TestCase
     {
         $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
-                Set\Strings::madeOf(Set\Chars::alphanumerical())->atLeast(1),
-                Set\Strings::any(),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
+                Set::strings()
+                    ->madeOf(Set::strings()->chars()->alphanumerical())
+                    ->atLeast(1),
+                Set::strings(),
             )
             ->then(function($method, $protocol, $scheme, $token) {
                 $request = Request::of(
@@ -139,8 +141,8 @@ class TransformTest extends TestCase
     {
         $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
             ->then(function($method, $protocol) {
                 $request = Request::of(

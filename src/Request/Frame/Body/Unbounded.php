@@ -26,6 +26,7 @@ final class Unbounded implements Frame
     {
     }
 
+    #[\Override]
     public function __invoke(
         callable $read,
         callable $readLine,
@@ -68,6 +69,7 @@ final class Unbounded implements Frame
     /**
      * @psalm-mutation-free
      */
+    #[\Override]
     public function filter(callable $predicate): Frame
     {
         return Filter::of($this, $predicate);
@@ -76,6 +78,7 @@ final class Unbounded implements Frame
     /**
      * @psalm-mutation-free
      */
+    #[\Override]
     public function map(callable $map): Frame
     {
         return Map::of($this, $map);
@@ -84,6 +87,7 @@ final class Unbounded implements Frame
     /**
      * @psalm-mutation-free
      */
+    #[\Override]
     public function flatMap(callable $map): Frame
     {
         return FlatMap::of($this, $map);

@@ -8,11 +8,12 @@ use Innmind\Http\{
     Header\ContentLength,
 };
 use Innmind\Filesystem\File\Content;
-use Innmind\IO\Readable\Frame;
+use Innmind\IO\Frame;
 use Innmind\Immutable\{
     Str,
     Maybe,
     Sequence,
+    Pair,
 };
 
 final class Body
@@ -46,22 +47,32 @@ final class Body
      */
     private static function bounded(int $length): Frame
     {
-        $accumulated = 0;
-
+        /**
+         * @psalm-suppress MixedOperand
+         * @var Frame<Sequence<Str>>
+         */
         return match (\min($length, 8192)) {
-            $length => Frame\Chunk::of($length)->map(Sequence::of(...)),
-            default => Frame\Chunks::of(8192)->until(
-                1,
-                static function($chunk) use (&$accumulated, $length) {
-                    /**
-                     * @psalm-suppress MixedOperand
-                     * @psalm-suppress MixedAssignment
-                     */
-                    $accumulated += $chunk->length();
-
-                    return $accumulated >= $length;
-                },
-            ),
+            $length => Frame::chunk($length)->strict()->map(Sequence::of(...)),
+            default => Frame::sequence(
+                Frame::chunk(8192)->loose(),
+            )
+                ->map(
+                    static fn($lines) => $lines
+                        ->map(static fn($line) => $line->unwrap()) // todo find a way to not throw
+                        ->map(static fn($line) => new Pair(
+                            $line->length(),
+                            $line,
+                        ))
+                        ->aggregate(static fn(Pair $a, Pair $b) => Sequence::of(
+                            $a,
+                            new Pair(
+                                $a->key() + $b->key(),
+                                $b->value(),
+                            ),
+                        ))
+                        ->takeWhile(static fn($pair) => $pair->key() < $length)
+                        ->map(static fn($pair) => $pair->value()),
+                ),
         };
     }
 

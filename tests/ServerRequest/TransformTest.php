@@ -26,14 +26,14 @@ class TransformTest extends TestCase
 {
     use BlackBox;
 
-    public function testInjectHostInUrlFromHeader()
+    public function testInjectHostInUrlFromHeader(): BlackBox\Proof
     {
-        $this
+        return $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
-            ->then(function($method, $protocol) {
+            ->prove(function($method, $protocol) {
                 $request = Request::of(
                     Url::of('/foo'),
                     $method,
@@ -52,14 +52,14 @@ class TransformTest extends TestCase
             });
     }
 
-    public function testDoesntInjectHostInUrlFromHeaderIfAlreadyInUrl()
+    public function testDoesntInjectHostInUrlFromHeaderIfAlreadyInUrl(): BlackBox\Proof
     {
-        $this
+        return $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
-            ->then(function($method, $protocol) {
+            ->prove(function($method, $protocol) {
                 $request = Request::of(
                     Url::of('//example.com:443/foo'), // without the first // it interprets the host as the scheme
                     $method,
@@ -78,14 +78,14 @@ class TransformTest extends TestCase
             });
     }
 
-    public function testInjectUserInformationInUrlFromHeader()
+    public function testInjectUserInformationInUrlFromHeader(): BlackBox\Proof
     {
-        $this
+        return $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
-            ->then(function($method, $protocol) {
+            ->prove(function($method, $protocol) {
                 $request = Request::of(
                     Url::of('/foo'),
                     $method,
@@ -107,16 +107,18 @@ class TransformTest extends TestCase
             });
     }
 
-    public function testDoesntInjectUserInformationInUrlFromHeaderIfNotBasicScheme()
+    public function testDoesntInjectUserInformationInUrlFromHeaderIfNotBasicScheme(): BlackBox\Proof
     {
-        $this
+        return $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
-                Set\Strings::madeOf(Set\Chars::alphanumerical())->atLeast(1),
-                Set\Strings::any(),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
+                Set::strings()
+                    ->madeOf(Set::strings()->chars()->alphanumerical())
+                    ->atLeast(1),
+                Set::strings(),
             )
-            ->then(function($method, $protocol, $scheme, $token) {
+            ->prove(function($method, $protocol, $scheme, $token) {
                 $request = Request::of(
                     Url::of('/foo'),
                     $method,
@@ -135,14 +137,14 @@ class TransformTest extends TestCase
             });
     }
 
-    public function testDoesntInjectUserInformationInUrlFromHeaderIfAlreadyInUrl()
+    public function testDoesntInjectUserInformationInUrlFromHeaderIfAlreadyInUrl(): BlackBox\Proof
     {
-        $this
+        return $this
             ->forAll(
-                Set\Elements::of(...Method::cases()),
-                Set\Elements::of(...ProtocolVersion::cases()),
+                Set::of(...Method::cases()),
+                Set::of(...ProtocolVersion::cases()),
             )
-            ->then(function($method, $protocol) {
+            ->prove(function($method, $protocol) {
                 $request = Request::of(
                     Url::of('//some:pwd@/foo'), // without the first // it interprets the host as the scheme
                     $method,

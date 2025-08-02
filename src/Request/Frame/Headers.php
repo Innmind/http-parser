@@ -6,9 +6,9 @@ namespace Innmind\HttpParser\Request\Frame;
 use Innmind\Http\{
     Headers as Model,
     Header,
-    Factory\Header\TryFactory,
+    Factory\Header\Factory,
 };
-use Innmind\IO\Readable\Frame;
+use Innmind\IO\Frame;
 use Innmind\Immutable\{
     Str,
     Maybe,
@@ -20,12 +20,16 @@ final class Headers
     /**
      * @return Frame<Maybe<Model>>
      */
-    public static function of(TryFactory $factory): Frame
+    public static function of(Factory $factory): Frame
     {
-        return Frame\Sequence::of(
-            Frame\Line::new()->map(static fn($line) => $line->trim()),
+        return Frame::sequence(
+            Frame::line()->map(static fn($line) => $line->trim()),
         )
-            ->until(static fn($line) => $line->empty())
+            ->map(
+                static fn($lines) => $lines
+                    ->map(static fn($line) => $line->unwrap()) // todo find a way to not throw
+                    ->takeWhile(static fn($line) => !$line->empty()),
+            )
             ->map(
                 static fn($lines) => $lines
                     ->filter(static fn($line) => !$line->empty())
@@ -35,9 +39,9 @@ final class Headers
     }
 
     /**
-     * @return Maybe<Header>
+     * @return Maybe<Header|Header\Custom>
      */
-    private static function parse(Str $line, TryFactory $factory): Maybe
+    private static function parse(Str $line, Factory $factory): Maybe
     {
         $captured = $line->capture('~^(?<name>[a-zA-Z0-9\-\_\.]+): (?<value>.*)$~');
 
@@ -47,15 +51,16 @@ final class Headers
     }
 
     /**
-     * @param Sequence<Maybe<Header>> $headers
+     * @param Sequence<Maybe<Header|Header\Custom>> $headers
      *
      * @return Maybe<Model>
      */
     private static function build(Sequence $headers): Maybe
     {
-        return $headers->match(
-            static fn($header, $rest) => Maybe::all($header, ...$rest->toList())->map(Model::of(...)),
-            static fn() => Maybe::just(Model::of()),
-        );
+        return $headers
+            ->sink(Model::of())
+            ->maybe(static fn($headers, $header) => $header->map(
+                $headers,
+            ));
     }
 }

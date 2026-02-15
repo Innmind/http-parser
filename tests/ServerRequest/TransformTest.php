@@ -146,7 +146,7 @@ class TransformTest extends TestCase
             )
             ->prove(function($method, $protocol) {
                 $request = Request::of(
-                    Url::of('//some:pwd@/foo'), // without the first // it interprets the host as the scheme
+                    Url::of('//some:pwd@host/foo'), // without the first // it interprets the host as the scheme
                     $method,
                     $protocol,
                     Headers::of(
@@ -160,7 +160,7 @@ class TransformTest extends TestCase
                 $serverRequest = Transform::of()($request);
 
                 $this->assertSame(
-                    'some:pwd@/foo',
+                    'some:pwd@host/foo',
                     $serverRequest->url()->toString(),
                 );
             });

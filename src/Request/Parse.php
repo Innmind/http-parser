@@ -15,7 +15,7 @@ use Innmind\Http\{
     Headers as HttpHeaders,
     Factory\Header\Factory,
 };
-use Innmind\TimeContinuum\Clock;
+use Innmind\Time\Clock;
 use Innmind\Filesystem\File\Content;
 use Innmind\Url\Url;
 use Innmind\IO\{

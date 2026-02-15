@@ -26,7 +26,6 @@ final class DecodeQuery
             $request->protocolVersion(),
             $request->headers(),
             $request->body(),
-            $request->environment(),
             $request->cookies(),
             ServerRequest\Query::of($query),
             $request->form(),

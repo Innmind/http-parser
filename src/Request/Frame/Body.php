@@ -41,7 +41,7 @@ final class Body
     }
 
     /**
-     * @param positive-int $length
+     * @param int<1, max> $length
      *
      * @return Frame<Sequence<Str>>
      */

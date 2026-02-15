@@ -9,7 +9,10 @@ use Innmind\Http\{
     Header\ContentType,
 };
 use Innmind\Filesystem\File\Content;
-use Innmind\MediaType\MediaType;
+use Innmind\MediaType\{
+    MediaType,
+    TopLevel,
+};
 
 final class DecodeForm
 {
@@ -38,7 +41,7 @@ final class DecodeForm
         MediaType $header,
         ServerRequest $request,
     ): ServerRequest {
-        if ($header->topLevel() !== 'application' || $header->subType() !== 'x-www-form-urlencoded') {
+        if ($header->topLevel() !== TopLevel::application || $header->subType() !== 'x-www-form-urlencoded') {
             return $request;
         }
 
@@ -50,7 +53,6 @@ final class DecodeForm
             $request->protocolVersion(),
             $request->headers(),
             Content::none(),
-            $request->environment(),
             $request->cookies(),
             $request->query(),
             Form::of($post),

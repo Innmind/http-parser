@@ -4,7 +4,7 @@ declare(strict_types = 1);
 namespace Tests\Innmind\HttpParser\Request;
 
 use Innmind\HttpParser\Request\Parse;
-use Innmind\TimeContinuum\Clock;
+use Innmind\Time\Clock;
 use Innmind\Http\{
     Request,
     Method,
@@ -96,7 +96,7 @@ class ParseTest extends TestCase
         $io = IO::fromAmbientAuthority()
             ->streams()
             ->acquire($tmp);
-        $io
+        $_ = $io
             ->write()
             ->sink(Sequence::of($content))
             ->unwrap();
@@ -126,7 +126,7 @@ class ParseTest extends TestCase
         $io = IO::fromAmbientAuthority()
             ->streams()
             ->acquire($tmp);
-        $io
+        $_ = $io
             ->write()
             ->sink(Sequence::of($content))
             ->unwrap();
@@ -298,7 +298,7 @@ class ParseTest extends TestCase
         $io = IO::fromAmbientAuthority()
             ->streams()
             ->acquire($tmp);
-        $io
+        $_ = $io
             ->write()
             ->sink(Sequence::of(Str::of($raw)))
             ->unwrap();
@@ -337,7 +337,7 @@ class ParseTest extends TestCase
         $io = IO::fromAmbientAuthority()
             ->streams()
             ->acquire($tmp);
-        $io
+        $_ = $io
             ->write()
             ->sink(Sequence::of(Str::of($raw)))
             ->unwrap();
@@ -382,7 +382,7 @@ class ParseTest extends TestCase
         $io = IO::fromAmbientAuthority()
             ->streams()
             ->acquire($tmp);
-        $io
+        $_ = $io
             ->write()
             ->sink(Sequence::of(Str::of($raw)))
             ->unwrap();

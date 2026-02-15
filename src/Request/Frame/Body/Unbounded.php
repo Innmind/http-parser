@@ -51,14 +51,14 @@ final class Unbounded
         return $chunks
             ->flatMap(static fn($chunk) => match (true) {
                 $chunk
-                    ->fold(new Concat)
+                    ->fold(Concat::monoid)
                     ->empty() => Sequence::of($end),
                 $chunk
-                    ->fold(new Concat)
+                    ->fold(Concat::monoid)
                     ->equals(Str::of("\r\n\r\n")) => Sequence::of($end),
                 $chunk
                     ->drop(2)
-                    ->fold(new Concat)
+                    ->fold(Concat::monoid)
                     ->equals(Str::of("\n\n")) => $chunk->take(2)->add($end),
                 default => $chunk->take(1),
             })

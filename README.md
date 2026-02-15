@@ -1,6 +1,6 @@
 # HTTP Parser
 
-[![Build Status](https://github.com/innmind/http-parser/workflows/CI/badge.svg?branch=main)](https://github.com/innmind/http-parser/actions?query=workflow%3ACI)
+[![CI](https://github.com/Innmind/http-parser/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Innmind/http-parser/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/innmind/http-parser/branch/develop/graph/badge.svg)](https://codecov.io/gh/innmind/http-parser)
 [![Type Coverage](https://shepherd.dev/github/innmind/http-parser/coverage.svg)](https://shepherd.dev/github/innmind/http-parser)
 

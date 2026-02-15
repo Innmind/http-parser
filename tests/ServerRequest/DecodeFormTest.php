@@ -8,7 +8,7 @@ use Innmind\HttpParser\{
     ServerRequest\Transform,
     Request\Parse,
 };
-use Innmind\TimeContinuum\Clock;
+use Innmind\Time\Clock;
 use Innmind\Http\ServerRequest;
 use Innmind\IO\IO;
 use Innmind\BlackBox\PHPUnit\Framework\TestCase;

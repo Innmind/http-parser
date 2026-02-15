@@ -32,7 +32,7 @@ use Innmind\HttpParser\{
     ServerRequest\DecodeQuery,
     ServerRequest\DecodeForm,
 };
-use Innmind\TimeContinuum\Clock;
+use Innmind\Time\Clock;
 use Innmind\IO\IO;
 use Innmind\Http\ServerRequest;
 use Innmind\Immutable\Str;

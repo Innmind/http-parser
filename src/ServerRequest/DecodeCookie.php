@@ -47,7 +47,6 @@ final class DecodeCookie
             $request->protocolVersion(),
             $request->headers(),
             $request->body(),
-            $request->environment(),
             Cookies::of($parameters->map(
                 static fn($_, $parameter) => $parameter->value(),
             )),
